@@ -1,1 +1,131 @@
-count
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" lang="ja"/>
+        <title>カウント</title>
+        <style>
+            #buttons {
+                position: fixed;
+                bottom: 5%;
+                left: 50%;
+                transform: translateX(-50%);
+                white-space: nowrap;
+            }
+
+            #number{
+                font-size: 10vw;
+                position: fixed;
+                text-align: center;
+                transform: translateX(-50%);
+                left: 50%;
+                top: 5%;
+            }
+
+            #plus1, #plus2, #plus3, #plus4, #plus5, #plus6, #plus7, #plus8, #plus9, #plus10, #plus15, #plus20{
+                font-size: 25px;
+                width: 60px;
+                height: 60px;
+                background-color: #008cff;
+                color: white;
+                border-radius: 30px;
+                margin: 5px;
+            }
+
+            #minus1, #minus2, #minus3, #minus4, #minus5, #minus6, #minus7, #minus8, #minus9, #minus10, #minus15, #minus20{
+                font-size: 25px;
+                width: 60px;
+                height: 60px;
+                background-color: #ff6161;
+                color: white;
+                border-radius: 30px;
+                margin: 5px;
+            }
+
+            #reset, #other{
+                font-size: 25px;
+                width: 120px;
+                height: 60px;
+                background-color: #bfbdbd;
+                color: black;
+                border-radius: 30px;
+                margin: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 id="number">0</h1>
+        <div id="buttons">
+        <div id="plus">
+        <button onclick="plus(1)" id="plus1">+1</button>
+        <button onclick="plus(2)" id="plus2">+2</button>
+        <button onclick="plus(3)" id="plus3">+3</button>
+        <button onclick="plus(4)" id="plus4">+4</button>
+        <button onclick="plus(5)" id="plus5">+5</button>
+        <button onclick="plus(6)" id="plus6">+6</button>
+        <button onclick="plus(7)" id="plus7">+7</button>
+        <button onclick="plus(8)" id="plus8">+8</button>
+        <button onclick="plus(9)" id="plus9">+9</button>
+        <button onclick="plus(10)" id="plus10">+10</button>
+        <button onclick="plus(15)" id="plus15">+15</button>
+        <button onclick="plus(20)" id="plus20">+20</button>
+        </div>
+        <div id="minus">
+        <button onclick="minus(1)" id="minus1">-1</button>
+        <button onclick="minus(2)" id="minus2">-2</button>
+        <button onclick="minus(3)" id="minus3">-3</button>
+        <button onclick="minus(4)" id="minus4">-4</button>
+        <button onclick="minus(5)" id="minus5">-5</button>
+        <button onclick="minus(6)" id="minus6">-6</button>
+        <button onclick="minus(7)" id="minus7">-7</button>
+        <button onclick="minus(8)" id="minus8">-8</button>
+        <button onclick="minus(9)" id="minus9">-9</button>
+        <button onclick="minus(10)" id="minus10">-10</button>
+        <button onclick="minus(15)" id="minus15">-15</button>
+        <button onclick="minus(20)" id="minus20">-20</button>
+        </div>
+        <div id="reset,other">
+        <button onclick="other()" id="other">その他</button>
+        <button onclick="reset()" id="reset">リセット</button>
+        </div>
+        <script>
+            const number = document.querySelector('h1');
+
+            let count = 0;
+
+            window.addEventListener('beforeunload', (e) => {
+                 e.preventDefault();
+                e.returnValue = '';
+            });
+
+            function plus(plus){
+                count = count+ (plus);
+                number.innerHTML = count;
+            }
+
+            function minus(minus){
+                count = count- (minus);
+                number.innerHTML = count;
+            }
+
+            function reset(){
+                if(window.confirm('リセットしますか？')) {
+                    count = 0;
+                    number.innerHTML = count;
+                } else {}       
+            }
+
+            function other(){
+                let other = prompt('追加する数値を入力');
+                if(other === null){
+                    return;
+                } else if(isNaN(other)){
+                    alert('数値を入力してください。');
+                    return;
+                } else {
+                    count = count + Number(other);
+                    number.innerHTML = count;
+                }
+            }
+        </script>
+    </body>
+</html>
