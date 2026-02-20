@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>マイクラああああMeetリンク</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; text-align: center; }
+    #meetLink {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.8rem 1.2rem;
+      background: #4285f4;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+    #meetLink[disabled] {
+      background: #aaa;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>今日のMeet会議</h1>
+  <p id="message">読み込み中…</p>
+  <a id="meetLink" href="#" target="_blank">リンク表示</a>
+
+  <script>
+    (async () => {
+      const now = new Date();
+      const h = now.getHours();
+      const msgEl  = document.getElementById('message');
+      const linkEl = document.getElementById('meetLink');
+
+      // 7:00～22:00 判定
+      if (h < 7 || h >= 22) {
+        msgEl.textContent = '現在は会議リンクを利用できません。7時以降にお越しください。';
+        linkEl.textContent = '利用不可';
+        linkEl.setAttribute('disabled','');
+        return;
+      }
+
+      // 7時～22時の間だけ、GAS APIからリンクを取得
+      try {
+        const resp = await fetch('https://script.google.com/macros/s/AKfycbzh-4zNzYNwufVHulbPOg9fniBmzEkwyUVjNj3Z3TE1auATKOp6QMS7nQQtuws-xLlj/exec');
+        const data = await resp.json();
+        if (data.meetLink) {
+          msgEl.textContent = '以下のリンクから会議に参加できます。';
+          linkEl.href = data.meetLink;
+          linkEl.textContent = '会議に参加する';
+        } else {
+          throw new Error('リンク未生成');
+        }
+      } catch (e) {
+        msgEl.textContent = 'リンクの取得に失敗しました。しばらくして再読み込みしてください。';
+        linkEl.textContent = '利用不可';
+        linkEl.setAttribute('disabled','');
+        console.error(e);
+      }
+    })();
+  </script>
+</body>
+</html>
