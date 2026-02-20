@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <!-- スマホでの正しい表示のためのviewport設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>シンプルホワイトボード</title>
+  <style>
+    /* ページ全体：余白なし、スクロールなし */
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      width: 100%;
+    }
+    /* ツールバーは常に画面上部に固定、内容が収まらない場合は横スクロール可能 */
+    .toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: rgba(240, 240, 240, 0.9);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      z-index: 10;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .toolbar button,
+    .toolbar input,
+    .toolbar label {
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    /* スライダーの横幅 */
+    .toolbar input[type="range"] {
+      width: 300px;
+    }
+    /* キャンバスコンテナ：ウィンドウサイズに合わせ、余分な部分を隠す */
+    #canvasContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* キャンバス：HTML属性で指定した実寸のまま利用（CSSでの拡大はしない） */
+    canvas {
+      display: block;
+    }
+    /* 消しゴムプレビュー用の円 */
+    #eraserPreview {
+      position: absolute;
+      pointer-events: none;
+      border: 1px solid gray;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="pen">ペン</button>
+    <button id="eraser">消しゴム</button>
+    <label for="size">太さ:</label>
+    <input type="range" id="size" min="1" max="50" value="10" step="1">
+    <!-- ペンの色選択はトグルボタンで切替。初期は黒 -->
+    ペンの色：
+	 <button id="penColorToggle">黒</button>
+    <button id="undo">↶</button>
+    <button id="clear">すべて消す</button>
+    <button id="download">ダウンロード</button>
+  </div>
+  
+  <div id="canvasContainer">
+    <!-- 初期は800×600のキャンバス。ウィンドウが広がった場合は拡大していく -->
+    <canvas id="drawingCanvas" width="800" height="600"></canvas>
+    <div id="eraserPreview"></div>
+  </div>
+  
+  <script>
+    const canvas = document.getElementById('drawingCanvas');
+    const context = canvas.getContext('2d');
+    const eraserPreview = document.getElementById('eraserPreview');
+    const container = document.getElementById('canvasContainer');
+
+    /* 
+      resizeCanvas の仕様：
+      - ウィンドウが広がった場合は、キャンバスを拡大（既存内容は保持）。
+      - ウィンドウが縮小された場合は、キャンバスはそのままにして、表示領域だけ切り取ります。
+    */
+    function resizeCanvas() {
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      container.style.width = winW + 'px';
+      container.style.height = winH + 'px';
+      
+      let newCanvasWidth = canvas.width;
+      let newCanvasHeight = canvas.height;
+      if (winW > canvas.width) {
+        newCanvasWidth = winW;
+      }
+      if (winH > canvas.height) {
+        newCanvasHeight = winH;
+      }
+      if (newCanvasWidth !== canvas.width || newCanvasHeight !== canvas.height) {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(canvas, 0, 0);
+        canvas.width = newCanvasWidth;
+        canvas.height = newCanvasHeight;
+        context.drawImage(tempCanvas, 0, 0);
+      }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let drawing = false;
+    let erasing = false;
+    let lineWidth = 10; // 初期太さ10px
+    // 初期ペン色は黒
+    let currentPenColor = "#000000";  
+    let undoStack = [];
+
+    function pushUndoState() {
+      if (canvas.width === 0 || canvas.height === 0) return;
+      const imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+      if (undoStack.length >= 15) {
+        undoStack.shift();
+      }
+      undoStack.push(imgData);
+    }
+
+    function undo() {
+      if (undoStack.length === 0) return;
+      const previousState = undoStack.pop();
+      context.putImageData(previousState, 0, 0);
+    }
+
+    // マウス・タッチ両対応：キャンバス内描画用の座標取得
+    function getCoordinates(event) {
+      let clientX, clientY;
+      if (event.touches && event.touches.length > 0) {
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
+      } else {
+        clientX = event.clientX;
+        clientY = event.clientY;
+      }
+      const rect = canvas.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    // 消しゴムプレビュー用：container基準の座標取得
+    function getContainerCoordinates(event) {
+      let clientX, clientY;
+      if (event.touches && event.touches.length > 0) {
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
+      } else {
+        clientX = event.clientX;
+        clientY = event.clientY;
+      }
+      const rect = container.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function updateEraserPreview(event) {
+      const coords = getContainerCoordinates(event);
+      eraserPreview.style.left = coords.x + 'px';
+      eraserPreview.style.top = coords.y + 'px';
+      eraserPreview.style.width = lineWidth + 'px';
+      eraserPreview.style.height = lineWidth + 'px';
+      eraserPreview.style.display = 'block';
+    }
+
+    // イベント登録（マウスはmousedownはキャンバス上、mousemove/upはdocumentに登録して、はみ出しても描画継続）
+    canvas.addEventListener('mousedown', startDrawing);
+    document.addEventListener('mousemove', draw);
+    document.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      startDrawing(event);
+    });
+    document.addEventListener('touchmove', (event) => {
+      event.preventDefault();
+      draw(event);
+    });
+    document.addEventListener('touchend', (event) => {
+      event.preventDefault();
+      stopDrawing();
+    });
+
+    // ツールバー操作
+    document.getElementById('pen').addEventListener('click', () => {
+      erasing = false;
+      eraserPreview.style.display = 'none';
+    });
+    document.getElementById('eraser').addEventListener('click', () => {
+      erasing = true;
+    });
+    document.getElementById('size').addEventListener('input', (event) => {
+      lineWidth = parseInt(event.target.value, 10);
+    });
+    // ペン色のトグルボタンによる切り替え
+    const penColorToggle = document.getElementById('penColorToggle');
+    penColorToggle.addEventListener('click', () => {
+      if (currentPenColor === "#000000") {
+        currentPenColor = "#ff0000";
+        penColorToggle.textContent = "赤";
+      } else {
+        currentPenColor = "#000000";
+        penColorToggle.textContent = "黒";
+      }
+    });
+    document.getElementById('undo').addEventListener('click', () => {
+      undo();
+    });
+    document.getElementById('clear').addEventListener('click', () => {
+      pushUndoState();
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    });
+    document.getElementById('download').addEventListener('click', () => {
+      const viewWidth = window.innerWidth;
+      const viewHeight = window.innerHeight;
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = viewWidth;
+      tempCanvas.height = viewHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(canvas, 0, 0, viewWidth, viewHeight, 0, 0, viewWidth, viewHeight);
+      const link = document.createElement('a');
+      link.download = 'drawing.png';
+      link.href = tempCanvas.toDataURL();
+      link.click();
+    });
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+        event.preventDefault();
+        undo();
+      }
+    });
+
+    function startDrawing(event) {
+      pushUndoState();
+      drawing = true;
+      const coords = getCoordinates(event);
+      context.beginPath();
+      context.moveTo(coords.x, coords.y);
+      if (erasing) {
+        updateEraserPreview(event);
+      }
+    }
+
+    function stopDrawing() {
+      drawing = false;
+      context.beginPath();
+    }
+
+    function draw(event) {
+      if (erasing) {
+        updateEraserPreview(event);
+      } else {
+        eraserPreview.style.display = 'none';
+      }
+      if (!drawing) return;
+      const coords = getCoordinates(event);
+      context.lineWidth = lineWidth;
+      context.lineCap = 'round';
+      // 消しゴム時は 'white' を使用
+      const color = erasing ? 'white' : currentPenColor;
+      context.strokeStyle = color;
+      context.lineTo(coords.x, coords.y);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(coords.x, coords.y);
+    }
+
+    // メニューバーのボタンをタッチ操作でも反応させる
+    document.querySelectorAll('.toolbar button').forEach(function(btn) {
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        btn.click();
+      });
+    });
+  </script>
+</body>
+</html>
