@@ -34,7 +34,7 @@
       const linkEl = document.getElementById('meetLink');
 
       // 7:00～22:00 判定
-      if (h < 7 || h >= 22) {
+      if (h < 7 || h >= 23) {
         msgEl.textContent = '現在は会議リンクを利用できません。7時以降にお越しください。';
         linkEl.textContent = '利用不可';
         linkEl.setAttribute('disabled','');
