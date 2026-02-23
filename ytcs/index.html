@@ -1,154 +1,299 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>YouTube リアルタイム登録者数</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <title>YouTube リアルタイム登録者数（ハンドル対応）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin:0; padding:0; }
     body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #05060a;
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(180deg,#02030a,#071026);
+      color:#fff;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+      padding:24px;
     }
-    .container {
-      text-align: center;
-      width: 100%;
-      max-width: 600px;
-      padding: 20px;
+    .card {
+      width:100%;
+      max-width:760px;
+      background:rgba(255,255,255,0.03);
+      border-radius:12px;
+      padding:28px;
+      box-shadow:0 8px 30px rgba(2,6,23,0.6);
+      text-align:center;
     }
-    input {
-      width: 80%;
-      padding: 12px;
-      font-size: 18px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-      margin-bottom: 16px;
+    h1 { font-size:20px; margin-bottom:8px; }
+    p.lead { color:#cbd5e1; margin-bottom:18px; }
+    .row { display:flex; gap:12px; justify-content:center; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+    input[type="text"] {
+      width:420px;
+      max-width:80%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.06);
+      background:rgba(255,255,255,0.02);
+      color:#fff;
+      font-size:16px;
+      outline:none;
     }
     button {
-      padding: 12px 24px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: #1e90ff;
-      color: #fff;
+      padding:12px 18px;
+      border-radius:10px;
+      border:none;
+      background:#06b6d4;
+      color:#012;
+      font-weight:700;
+      cursor:pointer;
+      font-size:15px;
     }
-    .hidden { display: none; }
+    button.secondary {
+      background:transparent;
+      color:#9fb3c8;
+      border:1px solid rgba(255,255,255,0.04);
+    }
+    .info {
+      margin-top:18px;
+      display:flex;
+      gap:16px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    .channelBox {
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .thumb {
+      width:64px;
+      height:64px;
+      border-radius:8px;
+      background:#111;
+      object-fit:cover;
+      border:1px solid rgba(255,255,255,0.04);
+    }
+    .meta { text-align:left; }
+    .meta .title { font-weight:700; font-size:18px; }
+    .meta .id { color:#9fb3c8; font-size:13px; margin-top:4px; }
     .count {
-      font-size: 64px;
-      font-weight: bold;
-      margin-top: 20px;
+      font-size:64px;
+      font-weight:800;
+      letter-spacing:0.02em;
+      margin-top:14px;
     }
-    .label {
-      font-size: 20px;
-      opacity: 0.8;
-    }
-    .error {
-      color: #ff6b6b;
-      margin-top: 12px;
+    .small { font-size:14px; color:#9fb3c8; margin-top:8px; }
+    .error { color:#ff7b7b; margin-top:12px; }
+    @media (max-width:520px) {
+      .count { font-size:44px; }
+      input[type="text"] { width:100%; }
     }
   </style>
 </head>
 <body>
+  <div class="card" role="main">
+    <h1>YouTube リアルタイム登録者数（ハンドル / ID 対応）</h1>
+    <p class="lead">`@` のあと（例: <code>@example</code>）だけを入れて「表示する」を押してください。`UC...` のチャンネルIDもそのまま使えます。</p>
 
-  <div class="container">
-
-    <!-- ▼ 初期画面：チャンネルID入力 -->
-    <div id="inputScreen">
-      <h2>YouTube リアルタイム登録者数</h2>
-      <p>チャンネルID（UC〜）を入力してください</p>
-      <input id="channelInput" placeholder="例: UCxxxxxxxxxxxx" />
-      <br />
-      <button onclick="start()">表示する</button>
-      <div id="inputError" class="error"></div>
+    <div class="row">
+      <input id="inputField" type="text" placeholder="@ハンドル または UCで始まるチャンネルID を入力" aria-label="チャンネル入力" />
+      <button id="startBtn">表示する</button>
+      <button id="clearBtn" class="secondary">戻る</button>
     </div>
 
-    <!-- ▼ 表示画面：登録者数 -->
-    <div id="displayScreen" class="hidden">
-      <h2 id="channelLabel"></h2>
-      <div class="label">現在の登録者数</div>
-      <div id="subCount" class="count">-</div>
-      <div id="displayError" class="error"></div>
-      <button onclick="back()">戻る</button>
+    <div id="infoArea" class="info" aria-live="polite" style="display:none;">
+      <div class="channelBox">
+        <img id="thumb" class="thumb" src="" alt="" style="display:none;" />
+        <div class="meta">
+          <div id="channelTitle" class="title"></div>
+          <div id="channelIdText" class="id"></div>
+        </div>
+      </div>
     </div>
 
+    <div id="countArea" style="display:none;">
+      <div class="count" id="subCount">-</div>
+      <div class="small" id="updatedAt"></div>
+    </div>
+
+    <div id="error" class="error" role="status" style="display:none;"></div>
+    <div class="small" style="margin-top:12px;">※ APIキーはページ内の <code>API_KEY</code> を差し替えてください。APIのクォータや公開設定により取得できない場合があります。</div>
   </div>
 
   <script>
-    // ★ YouTube APIキーを入れてください
+    // --- ここに YouTube Data API v3 のキーを入れてください ---
     const API_KEY = "AIzaSyD_l2jYnrI2l7n-n9xqMePiFX-Asab-NnU";
+    // -------------------------------------------------------
 
-    const inputScreen = document.getElementById("inputScreen");
-    const displayScreen = document.getElementById("displayScreen");
-    const channelInput = document.getElementById("channelInput");
-    const channelLabel = document.getElementById("channelLabel");
-    const subCountEl = document.getElementById("subCount");
-    const inputError = document.getElementById("inputError");
-    const displayError = document.getElementById("displayError");
+    const inputField = document.getElementById("inputField");
+    const startBtn = document.getElementById("startBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const infoArea = document.getElementById("infoArea");
+    const thumb = document.getElementById("thumb");
+    const channelTitle = document.getElementById("channelTitle");
+    const channelIdText = document.getElementById("channelIdText");
+    const subCount = document.getElementById("subCount");
+    const updatedAt = document.getElementById("updatedAt");
+    const errorEl = document.getElementById("error");
+    const countArea = document.getElementById("countArea");
 
     let currentChannelId = null;
-    let timer = null;
+    let pollTimer = null;
+    const POLL_INTERVAL = 5000; // 5秒ごとに更新
 
-    function start() {
-      const id = channelInput.value.trim();
-      if (!id || !id.startsWith("UC")) {
-        inputError.textContent = "正しいチャンネルID（UC〜）を入力してください";
+    startBtn.addEventListener("click", onStart);
+    clearBtn.addEventListener("click", onClear);
+    inputField.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") onStart();
+    });
+
+    function showError(msg) {
+      errorEl.style.display = "block";
+      errorEl.textContent = msg;
+    }
+    function clearError() {
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
+    }
+
+    function onClear() {
+      stopPolling();
+      currentChannelId = null;
+      inputField.value = "";
+      infoArea.style.display = "none";
+      countArea.style.display = "none";
+      clearError();
+    }
+
+    async function onStart() {
+      clearError();
+      const raw = (inputField.value || "").trim();
+      if (!raw) {
+        showError("チャンネルIDまたはハンドルを入力してください。例: @example または UCxxxxxxxxxxxx");
         return;
       }
 
-      inputError.textContent = "";
-      currentChannelId = id;
+      // 入力を正規化：先頭の @ を取り除く
+      let key = raw.startsWith("@") ? raw.slice(1) : raw;
 
-      inputScreen.classList.add("hidden");
-      displayScreen.classList.remove("hidden");
+      // もし UC で始まるなら channelId として扱う
+      if (key.startsWith("UC")) {
+        currentChannelId = key;
+      } else {
+        // それ以外はハンドル／検索語として search API でチャンネルを探す
+        try {
+          const searchUrl = "https://www.googleapis.com/youtube/v3/search"
+            + "?part=snippet"
+            + "&type=channel"
+            + "&q=" + encodeURIComponent(key)
+            + "&maxResults=1"
+            + "&key=" + encodeURIComponent(API_KEY);
 
-      channelLabel.textContent = "チャンネルID: " + id;
+          const r = await fetch(searchUrl);
+          if (!r.ok) throw new Error("search API HTTP " + r.status);
+          const j = await r.json();
+          if (!j.items || j.items.length === 0) {
+            throw new Error("該当するチャンネルが見つかりませんでした");
+          }
+          // search の結果から channelId を取得
+          currentChannelId = j.items[0].snippet.channelId;
+        } catch (e) {
+          showError("チャンネル検索に失敗しました: " + e.message);
+          return;
+        }
+      }
 
-      update();
-    }
+      // channelId が得られたら表示を開始
+      if (!currentChannelId) {
+        showError("チャンネルIDを解決できませんでした");
+        return;
+      }
 
-    function back() {
-      clearTimeout(timer);
-      displayScreen.classList.add("hidden");
-      inputScreen.classList.remove("hidden");
-    }
-
-    async function update() {
+      // チャンネル情報（タイトル・サムネ）を取得して表示
       try {
-        displayError.textContent = "";
-        const url =
-          "https://www.googleapis.com/youtube/v3/channels" +
-          "?part=statistics" +
-          "&id=" + encodeURIComponent(currentChannelId) +
-          "&key=" + encodeURIComponent(API_KEY);
+        await fetchChannelInfoAndStart(currentChannelId);
+      } catch (e) {
+        showError("チャンネル情報の取得に失敗しました: " + e.message);
+      }
+    }
+
+    async function fetchChannelInfoAndStart(channelId) {
+      clearError();
+      // channels API で snippet と statistics を一度に取る（snippet はタイトル・サムネ用）
+      const url = "https://www.googleapis.com/youtube/v3/channels"
+        + "?part=snippet,statistics"
+        + "&id=" + encodeURIComponent(channelId)
+        + "&key=" + encodeURIComponent(API_KEY);
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("channels API HTTP " + res.status);
+      const data = await res.json();
+      if (!data.items || !data.items[0]) throw new Error("チャンネルが見つかりません");
+
+      const item = data.items[0];
+      const title = item.snippet && item.snippet.title ? item.snippet.title : "（タイトル不明）";
+      const thumbUrl = item.snippet && item.snippet.thumbnails && (item.snippet.thumbnails.medium || item.snippet.thumbnails.default) ? (item.snippet.thumbnails.medium || item.snippet.thumbnails.default).url : "";
+      const stat = item.statistics && item.statistics.subscriberCount ? item.statistics.subscriberCount : null;
+
+      channelTitle.textContent = title;
+      channelIdText.textContent = "チャンネルID: " + channelId;
+      if (thumbUrl) {
+        thumb.src = thumbUrl;
+        thumb.style.display = "block";
+        thumb.alt = title + " のサムネイル";
+      } else {
+        thumb.style.display = "none";
+      }
+
+      if (stat !== null) {
+        subCount.textContent = Number(stat).toLocaleString("ja-JP");
+      } else {
+        subCount.textContent = "-";
+      }
+
+      infoArea.style.display = "flex";
+      countArea.style.display = "block";
+      updatedAt.textContent = "最終取得: " + new Date().toLocaleTimeString();
+
+      // 既にポーリング中なら止める
+      stopPolling();
+      // 5秒ごとに統計だけ更新する（statistics のみを取得）
+      pollTimer = setInterval(pollStatistics, POLL_INTERVAL);
+    }
+
+    async function pollStatistics() {
+      if (!currentChannelId) return;
+      clearError();
+      try {
+        const url = "https://www.googleapis.com/youtube/v3/channels"
+          + "?part=statistics"
+          + "&id=" + encodeURIComponent(currentChannelId)
+          + "&key=" + encodeURIComponent(API_KEY);
 
         const res = await fetch(url);
         if (!res.ok) throw new Error("HTTP " + res.status);
-
-        const data = await res.json();
-        if (!data.items || !data.items[0]) {
-          throw new Error("チャンネルが見つかりません");
-        }
-
-        const count = Number(data.items[0].statistics.subscriberCount)
-          .toLocaleString("ja-JP");
-
-        subCountEl.textContent = count;
-
+        const j = await res.json();
+        if (!j.items || !j.items[0]) throw new Error("チャンネルが見つかりません");
+        const count = j.items[0].statistics && j.items[0].statistics.subscriberCount ? j.items[0].statistics.subscriberCount : null;
+        subCount.textContent = count !== null ? Number(count).toLocaleString("ja-JP") : "-";
+        updatedAt.textContent = "最終取得: " + new Date().toLocaleTimeString();
       } catch (e) {
-        displayError.textContent = "取得に失敗しました: " + e.message;
+        showError("登録者数の取得に失敗しました: " + e.message);
       }
-
-      timer = setTimeout(update, 5000);
     }
-  </script>
 
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    // ページ離脱時にタイマーをクリア
+    window.addEventListener("beforeunload", () => stopPolling());
+  </script>
 </body>
 </html>
