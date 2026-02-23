@@ -116,6 +116,10 @@
       .channelName{font-size:36px}
       .subCount{font-size:72px}
     }
+
+    #channelIdSmall,#backBtn,#toggleThemeSmall{
+      display: none;
+    }
   </style>
 </head>
 <body data-theme="dark">
@@ -149,7 +153,8 @@
       <div id="channelIdSmall" class="channelIdSmall">チャンネルID: UCxxxxxxxxxxxx</div>
 
       <div class="smallBtnRow">
-
+        <button id="backBtn" class="smallBtn" title="戻る">戻る</button>
+        <button id="toggleThemeSmall" class="smallBtn" title="ライト/ダーク切替">テーマ切替</button>
       </div>
 
       <div id="displayError" class="error" style="display:none"></div>
