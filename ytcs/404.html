@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>YouTube リアルタイム登録者数</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: #05060a;
+      color: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    .title {
+      font-size: clamp(20px, 3vw, 28px);
+      margin-bottom: 16px;
+      opacity: 0.85;
+    }
+    .channel-id {
+      font-size: clamp(14px, 2vw, 18px);
+      margin-bottom: 32px;
+      color: #aaa;
+      word-break: break-all;
+    }
+    .count-label {
+      font-size: clamp(18px, 2.5vw, 22px);
+      margin-bottom: 8px;
+      opacity: 0.8;
+    }
+    .count {
+      font-size: clamp(48px, 10vw, 120px);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .error {
+      color: #ff6b6b;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    .hint {
+      margin-top: 24px;
+      font-size: 14px;
+      color: #bbb;
+      max-width: 640px;
+      line-height: 1.6;
+    }
+    .loading-dot {
+      display: inline-block;
+      width: 0.6em;
+      text-align: left;
+      animation: dots 1.2s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%, 20% { content: ""; }
+      40% { content: "."; }
+      60% { content: ".."; }
+      80%, 100% { content: "..."; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="title">YouTube リアルタイム登録者数</div>
+    <div class="channel-id" id="channelLabel"></div>
+    <div class="count-label" id="statusLabel">読み込み中<span class="loading-dot"></span></div>
+    <div class="count" id="subCount">-</div>
+    <div class="error" id="errorMsg"></div>
+    <div class="hint" id="hint">
+      このページのURLの後ろに<code>/@チャンネルID</code>を入力して開くと、そのチャンネルの登録者数を全画面表示します。<br />
+      例: <code>https://your-domain.com/@ExampleChannelID</code>
+    </div>
+  </div>
+
+  <script>
+    // ★ ここに自分の YouTube Data API v3 キーを入れてください
+    const API_KEY = "AIzaSyD_l2jYnrI2l7n-n9xqMePiFX-Asab-NnU";
+
+    const channelLabel = document.getElementById("channelLabel");
+    const statusLabel = document.getElementById("statusLabel");
+    const subCountEl = document.getElementById("subCount");
+    const errorMsg = document.getElementById("errorMsg");
+    const hint = document.getElementById("hint");
+
+    function getChannelIdFromPath() {
+      // パスから /@xxxxx を取得
+      const path = window.location.pathname; // 例: "/@UCxxxxxxx"
+      const match = path.match(/\/@([^/]+)/);
+      return match ? match[1] : null;
+    }
+
+    async function fetchSubscribers(channelId) {
+      const url =
+        "https://www.googleapis.com/youtube/v3/channels" +
+        "?part=statistics" +
+        "&id=" + encodeURIComponent(channelId) +
+        "&key=" + encodeURIComponent(API_KEY);
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error("HTTP " + res.status);
+      }
+      const data = await res.json();
+      if (!data.items || !data.items[0]) {
+        throw new Error("チャンネルが見つかりません");
+      }
+      const stats = data.items[0].statistics;
+      return stats.subscriberCount;
+    }
+
+    function formatNumber(numStr) {
+      const n = Number(numStr);
+      if (Number.isNaN(n)) return numStr;
+      return n.toLocaleString("ja-JP");
+    }
+
+    async function updateLoop(channelId) {
+      try {
+        errorMsg.textContent = "";
+        statusLabel.textContent = "更新中…";
+        const count = await fetchSubscribers(channelId);
+        subCountEl.textContent = formatNumber(count);
+        statusLabel.textContent = "現在の登録者数";
+      } catch (e) {
+        console.error(e);
+        errorMsg.textContent = "取得に失敗しました: " + e.message;
+        statusLabel.textContent = "エラー";
+      } finally {
+        // 5秒ごとに更新（好みで変更可）
+        setTimeout(() => updateLoop(channelId), 5000);
+      }
+    }
+
+    (function init() {
+      const channelId = getChannelIdFromPath();
+
+      if (!channelId) {
+        channelLabel.textContent = "チャンネルIDが指定されていません";
+        statusLabel.textContent = "URL を /@チャンネルID の形にしてください";
+        subCountEl.textContent = "-";
+        return;
+      }
+
+      hint.style.display = "none";
+      channelLabel.textContent = "チャンネルID: " + channelId;
+      statusLabel.textContent = "読み込み中…";
+      updateLoop(channelId);
+    })();
+  </script>
+</body>
+</html>
