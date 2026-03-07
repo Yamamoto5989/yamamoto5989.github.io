@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" lang="ja" />
+        <title>疑似仮想通貨[ゲーム用]</title>
+        <style>
+            #number {
+                font-size: 7vw;
+                text-align: center;
+            }
+
+            #plus,#minus {
+                font-size: 3vw;
+                width: 15vw;
+                height: 5vw;
+                border-radius: 2.5vw;
+                display: block;
+                margin: 0 auto;
+            }
+
+            #plus {
+                background-color: #008cff;
+                color: #ffffff;
+            }
+
+            #minus {
+                background-color: #ff6161;
+                color: #ffffff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 id="number">0円</h1>
+        <div id="buttons">
+        <button id="plus" onclick="plus()">受け取る</button>
+        <br>
+        <button id="minus" onclick="minus()">払う</button>
+        </div>
+        <script>
+            const number = document.querySelector('h1');
+
+            let money = 0
+
+            function plus() {
+                let plus = prompt("受け取る");
+                if(plus === null){
+                    return;
+                } else if(isNaN(plus)){
+                    alert('数値を入力してください。');
+                    return;
+                } else {
+                money += Number(plus);
+                number.innerHTML = money + "円";
+                }
+            }
+
+            function minus() {
+                let minus = prompt("払う");
+                if(minus === null){
+                    return;
+                } else if(isNaN(minus)){
+                    alert('数値を入力してください。');
+                    return;
+                } else {
+                money -= Number(minus);
+                number.innerHTML = money + "円";
+                }
+            }
+        </script>
+    </body>
+</html>
