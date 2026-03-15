@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dark Screen</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Syne:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e6e0;
+    --muted: #666;
+    --accent: #d4ff6e;
+    --accent-dim: rgba(212,255,110,0.12);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .launcher {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 48px;
+    transition: opacity 0.4s ease;
+  }
+
+  .launcher.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .info-cards {
+    display: flex;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 140px;
+  }
+
+  .card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .card-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .btn-start {
+    position: relative;
+    background: var(--accent);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 100px;
+    padding: 18px 56px;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    text-transform: uppercase;
+  }
+
+  .btn-start:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 32px rgba(212,255,110,0.35);
+  }
+
+  .btn-start:active {
+    transform: translateY(0);
+  }
+
+  .hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Fullscreen overlay ── */
+  #overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 9999;
+    cursor: none;
+  }
+
+  #overlay.active {
+    display: block;
+  }
+
+  /* Progress ring shown while holding space */
+  #hold-ui {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  #hold-ui.active {
+    display: flex;
+  }
+
+  .ring-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+
+  .ring-wrap svg {
+    transform: rotate(-90deg);
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: rgba(255,255,255,0.06);
+    stroke-width: 3;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 330;
+    stroke-dashoffset: 330;
+    transition: stroke-dashoffset 0.05s linear;
+  }
+
+  .ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .ring-label span:first-child {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .ring-label span:last-child {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  #hold-ui.active .ring-label span:last-child {
+    opacity: 1;
+  }
+
+  /* small corner hint in dark screen */
+  #screen-hint {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.12);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    z-index: 10001;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+
+  #screen-hint.faded {
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="launcher" id="launcher">
+  <div class="title-block">
+    <h1>Dark<span>.</span></h1>
+    <p class="subtitle">Fullscreen focus tool</p>
+  </div>
+
+  <div class="info-cards">
+    <div class="card">
+      <span class="card-label">起動</span>
+      <span class="card-value">開始ボタン</span>
+    </div>
+    <div class="card">
+      <span class="card-label">終了</span>
+      <span class="card-value">スペース長押し</span>
+    </div>
+  </div>
+
+  <button class="btn-start" id="btnStart">開始</button>
+  <p class="hint">SPACE を 1.5 秒長押しで閉じる</p>
+</div>
+
+<!-- black screen -->
+<div id="overlay"></div>
+
+<!-- hold UI -->
+<div id="hold-ui">
+  <div class="ring-wrap">
+    <svg viewBox="0 0 120 120" width="120" height="120">
+      <circle class="ring-bg" cx="60" cy="60" r="52.5"/>
+      <circle class="ring-progress" id="ringPath" cx="60" cy="60" r="52.5"/>
+    </svg>
+    <div class="ring-label">
+      <span>hold</span>
+      <span id="ringPct">0%</span>
+    </div>
+  </div>
+</div>
+
+<!-- hint text on dark screen -->
+<div id="screen-hint">SPACE 長押しで閉じる</div>
+
+<script>
+  const launcher  = document.getElementById('launcher');
+  const overlay   = document.getElementById('overlay');
+  const holdUI    = document.getElementById('hold-ui');
+  const ringPath  = document.getElementById('ringPath');
+  const ringPct   = document.getElementById('ringPct');
+  const screenHint = document.getElementById('screen-hint');
+  const CIRCUMFERENCE = 2 * Math.PI * 52.5;
+  const HOLD_DURATION = 1500;
+
+  let isOpen     = false;
+  let holdStart  = null;
+  let rafId      = null;
+  let hintTimer  = null;
+
+  document.getElementById('btnStart').addEventListener('click', openScreen);
+
+  function openScreen() {
+    launcher.classList.add('hidden');
+    overlay.classList.add('active');
+    isOpen = true;
+    document.activeElement?.blur();
+
+    const req = document.documentElement.requestFullscreen
+      || document.documentElement.webkitRequestFullscreen
+      || document.documentElement.mozRequestFullScreen;
+    if (req) req.call(document.documentElement).catch(() => {});
+
+    screenHint.classList.remove('faded');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => screenHint.classList.add('faded'), 3000);
+  }
+
+  function closeScreen() {
+    isOpen = false;
+    overlay.classList.remove('active');
+    holdUI.classList.remove('active');
+    launcher.classList.remove('hidden');
+
+    const ex = document.exitFullscreen
+      || document.webkitExitFullscreen
+      || document.mozCancelFullScreen;
+    if (ex && document.fullscreenElement) ex.call(document).catch(() => {});
+
+    resetRing();
+    cancelAnimationFrame(rafId);
+    holdStart = null;
+  }
+
+  function resetRing() {
+    ringPath.style.strokeDashoffset = CIRCUMFERENCE;
+    ringPct.textContent = '0%';
+  }
+
+  function updateRing(progress) {
+    const offset = CIRCUMFERENCE * (1 - progress);
+    ringPath.style.strokeDashoffset = offset;
+    ringPct.textContent = Math.round(progress * 100) + '%';
+  }
+
+  function tick() {
+    if (!holdStart) return;
+    const elapsed = Date.now() - holdStart;
+    const progress = Math.min(elapsed / HOLD_DURATION, 1);
+    updateRing(progress);
+    if (progress >= 1) {
+      closeScreen();
+      return;
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (!isOpen) return;
+    if (e.code === 'Space' && !e.repeat) {
+      e.preventDefault();
+      holdStart = Date.now();
+      holdUI.classList.add('active');
+      rafId = requestAnimationFrame(tick);
+    }
+    if (e.code === 'Space') e.preventDefault();
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.code === 'Space') {
+      cancelAnimationFrame(rafId);
+      holdUI.classList.remove('active');
+      resetRing();
+      holdStart = null;
+    }
+  });
+</script>
+</body>
+</html>
