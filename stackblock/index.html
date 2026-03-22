@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StackBlock</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg: #050508;
+    --accent: #00ffcc;
+    --accent3: #ffe600;
+    --glow: 0 0 20px var(--accent), 0 0 60px rgba(0,255,204,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', monospace;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  #game-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  #header { text-align: center; }
+
+  #title {
+    font-size: clamp(26px, 5.5vw, 44px);
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { text-shadow: 0 0 20px var(--accent), 0 0 60px rgba(0,255,204,0.3); }
+    50%      { text-shadow: 0 0 35px var(--accent), 0 0 110px rgba(0,255,204,0.55); }
+  }
+
+  #score-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(12px, 2.3vw, 17px);
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.15em;
+    margin-top: 4px;
+  }
+  #score-display span { color: var(--accent3); font-weight: bold; }
+
+  #canvas-wrap { position: relative; }
+
+  canvas {
+    display: block;
+    border: 1px solid rgba(0,255,204,0.12);
+    box-shadow: 0 0 50px rgba(0,255,204,0.07);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: rgba(5,5,8,0.9);
+    backdrop-filter: blur(5px);
+    z-index: 10;
+    width: 100%;
+    text-align: center;
+  }
+
+  .overlay h2 {
+    font-size: clamp(20px, 5vw, 32px);
+    font-weight: 900;
+    /* letter-spacingで右にずれる分を左paddingで補正 */
+    padding-left: 0.3em;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    width: 100%;
+    text-align: center;
+  }
+
+  .overlay p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(11px, 2.3vw, 14px);
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.1em;
+    line-height: 1.9;
+    padding: 0 24px;
+    text-align: center;
+  }
+
+  .big-score {
+    font-size: clamp(48px, 10vw, 80px);
+    font-weight: 900;
+    color: var(--accent3);
+    text-shadow: 0 0 24px var(--accent3), 0 0 70px rgba(255,230,0,0.4);
+    line-height: 1;
+  }
+
+  @keyframes scoreIn {
+    from { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+  }
+
+  .btn {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(11px, 2vw, 14px);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 12px 34px;
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: background 0.2s, transform 0.1s;
+    box-shadow: 0 0 24px rgba(0,255,204,0.35);
+  }
+  .btn:hover  { background: #00ffe5; transform: scale(1.05); }
+  .btn:active { transform: scale(0.96); }
+
+  #hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.15em;
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.1} }
+
+  #floats {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 20;
+    overflow: hidden;
+  }
+
+  @keyframes floatUp {
+    0%   { opacity:1; transform:translate(-50%,-40%) scale(1.3); }
+    40%  { opacity:1; transform:translate(-50%,-75%) scale(1); }
+    100% { opacity:0; transform:translate(-50%,-130%) scale(0.75); }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-wrap">
+  <div id="header">
+    <div id="title">StackBlock</div>
+    <div id="score-display">SCORE: <span id="score-num">0</span> &nbsp;|&nbsp; BEST: <span id="best-num">0</span></div>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div id="floats"></div>
+
+    <div class="overlay" id="start-screen">
+      <h2>STACK</h2>
+      <p>ブロックが重なった部分だけが<br>次のブロックになります<br>できるだけ高く積み上げよう！</p>
+      <button class="btn" id="start-btn">START GAME</button>
+      <div id="hint">CLICK &nbsp;/&nbsp; TAP &nbsp;/&nbsp; SPACE</div>
+    </div>
+
+    <div class="overlay" id="gameover-screen" style="display:none">
+      <h2>GAME OVER</h2>
+      <div class="big-score" id="final-score">0</div>
+      <p id="gameover-msg">SCORE</p>
+      <button class="btn" id="restart-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  🔊 SOUND MANAGER
+//  各 play〇〇() の中のコメントアウトを外すと
+//  Web Audio API で電子音が鳴ります。
+//  自由にカスタマイズしてください！
+// ══════════════════════════════════════════════════════
+const SoundManager = {
+  ctx: null,
+
+  init() {
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) { console.log('Web Audio API unavailable'); }
+  },
+
+  // ブロックを置いた時の音
+  playDrop() {
+    this.tone(300, 0.08, 'square', 0.18);
+  },
+
+  // パーフェクト時の音
+  playPerfect() {
+    this.tone(660, 0.10, 'sine', 0.25);
+    setTimeout(() => this.tone(880, 0.12, 'sine', 0.25), 80);
+  },
+
+  // ゲームオーバー時の音
+  playGameOver() {
+    this.tone(180, 0.55, 'sawtooth', 0.20);
+  },
+
+  // 新ブロック登場時の音
+  playSpawn() {
+    this.tone(440, 0.04, 'triangle', 0.08);
+  },
+
+  // ── トーン生成ヘルパー ──────────────────────
+  // freq     = 周波数 (Hz)
+  // duration = 秒数
+  // type     = 'sine' | 'square' | 'triangle' | 'sawtooth'
+  // volume   = 音量 0.0〜1.0
+  tone(freq, duration, type = 'sine', volume = 0.3) {
+    if (!this.ctx) return;
+    const osc  = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  },
+};
+
+// ══════════════════════════════════════════════════════
+//  Canvas
+// ══════════════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const CW = 360, CH = 560;
+canvas.width = CW; canvas.height = CH;
+
+// 斜め上から見た奥行き (isometric depth)
+const ISO_DX = 26;
+const ISO_DY = 12;
+
+// プレイフィールド
+const BLOCK_H = 24;
+const GX_MIN  = 14;
+const GX_MAX  = CW - ISO_DX - 14;
+const GAME_W  = GX_MAX - GX_MIN;
+const INIT_W  = Math.floor(GAME_W * 0.72);
+
+// カメラ: 頂点ブロックをこのY座標に常に合わせる
+const CAM_TARGET_Y = CH * 0.58;
+let camY = 0, camYTarget = 0;
+
+// カラーパレット
+const COLORS = [
+  { fill:'#00ffcc', top:'#33ffe0', side:'#007755', glow:'rgba(0,255,204,0.65)' },
+  { fill:'#ff2d78', top:'#ff5599', side:'#991548', glow:'rgba(255,45,120,0.65)' },
+  { fill:'#ffe600', top:'#ffee44', side:'#998800', glow:'rgba(255,230,0,0.65)'  },
+  { fill:'#7c3aff', top:'#9d63ff', side:'#461ea0', glow:'rgba(124,58,255,0.65)' },
+  { fill:'#00cfff', top:'#44dfff', side:'#007799', glow:'rgba(0,207,255,0.65)'  },
+  { fill:'#ff6b00', top:'#ff8c33', side:'#883a00', glow:'rgba(255,107,0,0.65)'  },
+];
+
+// ── ゲーム状態 ────────────────────────────────────
+let state = 'idle';
+let blocks = [], movingBlock = null;
+let score = 0, best = parseInt(localStorage.getItem('stack_best') || '0');
+let blockCount = 0;
+let raf = null, lastTime = 0;
+
+// エフェクト
+let particles  = [];
+let shakeTimer = 0, shakePower = 0;
+let landFlash  = null;   // 着地白フラッシュ
+let perfectRing = null;  // パーフェクト拡大リング
+
+// ── 座標ヘルパー ──────────────────────────────────
+function stackY(idx) {
+  return CH + camY - (idx + 1) * BLOCK_H;
+}
+
+// ════════════════════════════════════════════════════
+//  初期化 / スポーン
+// ════════════════════════════════════════════════════
+function initGame() {
+  blocks = []; particles = [];
+  score = 0; blockCount = 0;
+  camY = 0; camYTarget = 0;
+  shakeTimer = 0; landFlash = null; perfectRing = null;
+
+  blocks.push({
+    x: GX_MIN + (GAME_W - INIT_W) / 2,
+    w: INIT_W, colorIdx: 0
+  });
+  document.getElementById('score-num').textContent = 0;
+  spawnMoving();
+}
+
+function spawnMoving() {
+  const top = blocks[blocks.length - 1];
+  const colorIdx = blocks.length % COLORS.length;
+  const speed = 90 + Math.min(score * 6, 200);
+  blockCount++;
+
+  // 左右交互 (偶数=左から / 奇数=右から)
+  const fromLeft = (blockCount % 2 === 0);
+  movingBlock = {
+    x: fromLeft ? GX_MIN - top.w - 8 : GX_MAX + 8,
+    w: top.w, colorIdx,
+    dir: fromLeft ? 1 : -1,
+    speed,
+  };
+  SoundManager.playSpawn();
+}
+
+// ════════════════════════════════════════════════════
+//  ドロップ処理
+// ════════════════════════════════════════════════════
+function drop() {
+  if (state !== 'playing' || !movingBlock) return;
+
+  const top  = blocks[blocks.length - 1];
+  const left = Math.max(movingBlock.x, top.x);
+  const rght = Math.min(movingBlock.x + movingBlock.w, top.x + top.w);
+  const ow   = rght - left;
+
+  if (ow <= 0) { gameOver(); return; }
+
+  const isPerfect = Math.abs(ow - top.w) < 4;
+  const newX = isPerfect ? top.x : left;
+  const newW = isPerfect ? top.w : ow;
+
+  // カットパーティクル
+  cutParticles(movingBlock.x, movingBlock.w, newX, newW,
+               blocks.length, movingBlock.colorIdx);
+
+  // 着地フラッシュ
+  landFlash = {
+    life: 1, x: newX, w: newW,
+    stackIdx: blocks.length,
+    color: COLORS[movingBlock.colorIdx % COLORS.length].glow,
+  };
+
+  blocks.push({ x: newX, w: newW, colorIdx: movingBlock.colorIdx });
+
+  score++;
+  document.getElementById('score-num').textContent = score;
+  if (score > best) {
+    best = score;
+    localStorage.setItem('stack_best', best);
+    document.getElementById('best-num').textContent = best;
+  }
+
+  // カメラ追従
+  const topSY = stackY(blocks.length - 1);
+  if (topSY < CAM_TARGET_Y) camYTarget += CAM_TARGET_Y - topSY;
+
+  if (isPerfect) {
+    perfectRing = { life: 1, x: newX, w: newW, stackIdx: blocks.length - 1 };
+    perfectParticles(newX, newW, blocks.length - 1, movingBlock.colorIdx);
+    pushFloat('PERFECT!', '#ffe600', true);
+    SoundManager.playPerfect();
+  } else {
+    pushFloat('+1', COLORS[movingBlock.colorIdx % COLORS.length].fill, false);
+    SoundManager.playDrop();
+  }
+
+  spawnMoving();
+}
+
+// ════════════════════════════════════════════════════
+//  ゲームオーバー
+// ════════════════════════════════════════════════════
+function gameOver() {
+  state = 'over';
+  shakeTimer = 0.55; shakePower = 15;
+  SoundManager.playGameOver();
+
+  setTimeout(() => {
+    cancelAnimationFrame(raf);
+    const el = document.getElementById('final-score');
+    el.style.animation = 'none';
+    el.textContent = score;
+    el.offsetHeight; // reflow
+    el.style.animation = 'scoreIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both';
+    document.getElementById('gameover-msg').textContent =
+      score >= 20 ? 'EXCELLENT! 🏆' : score >= 10 ? 'GREAT STACK!' : 'SCORE';
+    document.getElementById('gameover-screen').style.display = 'flex';
+  }, 500);
+}
+
+// ════════════════════════════════════════════════════
+//  パーティクル
+// ════════════════════════════════════════════════════
+function addParticle(x, y, vx, vy, size, colorIdx) {
+  const c = COLORS[colorIdx % COLORS.length];
+  particles.push({
+    x, y, vx, vy, size,
+    color: c.fill, glow: c.glow,
+    life: 1,
+    decay: 0.022 + Math.random() * 0.018,
+    gravity: 0.26,
+  });
+}
+
+function cutParticles(oldX, oldW, newX, newW, stackIdx, colorIdx) {
+  const sy = stackY(stackIdx);
+  const addSide = (sx, sw, dxDir) => {
+    const n = Math.min(10, Math.floor(sw / 3) + 4);
+    for (let i = 0; i < n; i++)
+      addParticle(
+        sx + Math.random() * sw,
+        sy + Math.random() * BLOCK_H,
+        dxDir * (2 + Math.random() * 4),
+        -(3 + Math.random() * 5),
+        3 + Math.random() * 4,
+        colorIdx
+      );
+  };
+  if (newX > oldX)             addSide(oldX,      newX - oldX,           -1);
+  if (newX + newW < oldX + oldW) addSide(newX+newW, (oldX+oldW)-(newX+newW), 1);
+}
+
+function perfectParticles(bx, bw, stackIdx, colorIdx) {
+  const sy = stackY(stackIdx);
+  for (let i = 0; i < 24; i++) {
+    const a = (Math.PI * 2 * i) / 24;
+    const s = 3.5 + Math.random() * 3;
+    addParticle(
+      bx + bw/2 + (Math.random()-0.5)*bw*0.5,
+      sy - 4,
+      Math.cos(a) * s, Math.sin(a) * s - 3.5,
+      3 + Math.random() * 3,
+      colorIdx
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  DOMフローティングテキスト
+// ════════════════════════════════════════════════════
+function pushFloat(text, color, big) {
+  const el = document.createElement('div');
+  el.style.cssText = [
+    'position:absolute', 'left:50%', 'top:50%',
+    `font-family:'Orbitron',monospace`,
+    `font-size:${big ? 22 : 15}px`,
+    'font-weight:900',
+    `color:${color}`,
+    `text-shadow:0 0 14px ${color}`,
+    'letter-spacing:0.15em',
+    'white-space:nowrap',
+    'pointer-events:none',
+    'animation:floatUp 0.85s ease-out forwards',
+  ].join(';');
+  el.textContent = text;
+  document.getElementById('floats').appendChild(el);
+  setTimeout(() => el.remove(), 860);
+}
+
+// ════════════════════════════════════════════════════
+//  アイソメトリックブロック描画
+// ════════════════════════════════════════════════════
+function drawIsoBlock(bx, sy, bw, colorIdx, alpha, bright) {
+  const c = COLORS[colorIdx % COLORS.length];
+  const h = BLOCK_H - 2;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // 右側面
+  ctx.beginPath();
+  ctx.moveTo(bx+bw,        sy+h);
+  ctx.lineTo(bx+bw,        sy);
+  ctx.lineTo(bx+bw+ISO_DX, sy-ISO_DY);
+  ctx.lineTo(bx+bw+ISO_DX, sy+h-ISO_DY);
+  ctx.closePath();
+  ctx.fillStyle = c.side;
+  ctx.fill();
+
+  // 上面
+  ctx.beginPath();
+  ctx.moveTo(bx,            sy);
+  ctx.lineTo(bx+bw,         sy);
+  ctx.lineTo(bx+bw+ISO_DX,  sy-ISO_DY);
+  ctx.lineTo(bx+ISO_DX,     sy-ISO_DY);
+  ctx.closePath();
+  ctx.fillStyle = c.top;
+  ctx.fill();
+
+  // 前面
+  ctx.shadowColor = c.glow;
+  ctx.shadowBlur  = bright ? 24 : 12;
+  ctx.fillStyle   = c.fill;
+  ctx.fillRect(bx, sy, bw, h);
+
+  // ハイライト
+  ctx.shadowBlur  = 0;
+  ctx.fillStyle   = 'rgba(255,255,255,0.2)';  ctx.fillRect(bx, sy, bw, 3);
+  ctx.fillStyle   = 'rgba(255,255,255,0.1)';  ctx.fillRect(bx, sy, 2, h);
+  ctx.fillStyle   = 'rgba(0,0,0,0.25)';       ctx.fillRect(bx, sy+h-3, bw, 3);
+
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════════
+//  メインループ
+// ════════════════════════════════════════════════════
+function draw(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+
+  camY += (camYTarget - camY) * Math.min(1, dt * 9);
+
+  ctx.clearRect(0, 0, CW, CH);
+  const bg = ctx.createLinearGradient(0, 0, 0, CH);
+  bg.addColorStop(0, '#020205'); bg.addColorStop(1, '#080814');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, CW, CH);
+
+  // シェイク
+  const shaking = shakeTimer > 0;
+  if (shaking) {
+    shakeTimer -= dt;
+    ctx.save();
+    ctx.translate(
+      (Math.random()-0.5) * shakePower,
+      (Math.random()-0.5) * shakePower
+    );
+    shakePower *= 0.85;
+  }
+
+  // 積まれたブロック
+  for (let i = 0; i < blocks.length; i++) {
+    const b  = blocks[i];
+    const sy = stackY(i);
+    if (sy > CH+20 || sy+BLOCK_H+ISO_DY < -20) continue;
+    const isTop = i === blocks.length - 1;
+    const alpha = isTop ? 1 : Math.min(1, 0.3 + (i / Math.max(1, blocks.length-1)) * 0.7);
+    drawIsoBlock(b.x, sy, b.w, b.colorIdx, alpha, isTop);
+  }
+
+  // 着地フラッシュ
+  if (landFlash && landFlash.life > 0) {
+    landFlash.life -= dt * 4.5;
+    const sy = stackY(landFlash.stackIdx);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, landFlash.life) * 0.55;
+    ctx.shadowColor = landFlash.color; ctx.shadowBlur = 28;
+    ctx.fillStyle   = '#ffffff';
+    ctx.fillRect(landFlash.x, sy, landFlash.w, BLOCK_H - 2);
+    ctx.restore();
+    if (landFlash.life <= 0) landFlash = null;
+  }
+
+  // パーフェクトリング
+  if (perfectRing && perfectRing.life > 0) {
+    perfectRing.life -= dt * 3.2;
+    const t  = 1 - perfectRing.life;
+    const sy = stackY(perfectRing.stackIdx);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, perfectRing.life * 0.9);
+    ctx.strokeStyle = '#ffe600';
+    ctx.shadowColor = 'rgba(255,230,0,0.9)'; ctx.shadowBlur = 22;
+    ctx.lineWidth   = 3;
+    ctx.strokeRect(
+      perfectRing.x  - t*32,
+      sy             - t*14,
+      perfectRing.w  + t*64,
+      BLOCK_H        + t*28 - 2
+    );
+    ctx.restore();
+    if (perfectRing.life <= 0) perfectRing = null;
+  }
+
+  // 動くブロック
+  if (movingBlock && state === 'playing') {
+    movingBlock.x += movingBlock.dir * movingBlock.speed * dt;
+
+    // バウンス
+    if (movingBlock.x < GX_MIN - movingBlock.w * 0.35) {
+      movingBlock.x = GX_MIN - movingBlock.w * 0.35; movingBlock.dir = 1;
+    }
+    if (movingBlock.x > GX_MAX - movingBlock.w * 0.65) {
+      movingBlock.x = GX_MAX - movingBlock.w * 0.65; movingBlock.dir = -1;
+    }
+
+    const msy = stackY(blocks.length);
+
+    // 残像トレイル
+    ctx.save();
+    for (let t = 1; t <= 4; t++) {
+      ctx.globalAlpha = 0.065 - t * 0.012;
+      ctx.fillStyle   = COLORS[movingBlock.colorIdx % COLORS.length].fill;
+      ctx.fillRect(
+        movingBlock.x - movingBlock.dir * t * 9,
+        msy, movingBlock.w, BLOCK_H - 2
+      );
+    }
+    ctx.restore();
+
+    drawIsoBlock(movingBlock.x, msy, movingBlock.w, movingBlock.colorIdx, 1, true);
+
+    // 重なりヒント
+    const top = blocks[blocks.length - 1];
+    const ol  = Math.max(movingBlock.x, top.x);
+    const or_ = Math.min(movingBlock.x + movingBlock.w, top.x + top.w);
+    if (or_ > ol) {
+      ctx.save();
+      ctx.globalAlpha = 0.14; ctx.fillStyle = '#ffffff';
+      ctx.fillRect(ol, msy, or_ - ol, BLOCK_H - 2);
+      ctx.restore();
+    }
+  }
+
+  // パーティクル
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.vy += p.gravity; p.x += p.vx; p.y += p.vy;
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle   = p.color;
+    ctx.shadowColor = p.glow; ctx.shadowBlur = 8;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    ctx.restore();
+  }
+
+  if (shaking) ctx.restore();
+  raf = requestAnimationFrame(draw);
+}
+
+// ════════════════════════════════════════════════════
+//  コントロール
+// ════════════════════════════════════════════════════
+function handleInput() { if (state === 'playing') drop(); }
+
+canvas.addEventListener('click', handleInput);
+document.addEventListener('keydown', e => {
+  if (['Space','ArrowDown','Enter'].includes(e.code)) {
+    e.preventDefault(); handleInput();
+  }
+});
+document.addEventListener('touchstart', e => {
+  if (state === 'playing') { e.preventDefault(); handleInput(); }
+}, { passive: false });
+
+document.getElementById('start-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  SoundManager.init();
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('best-num').textContent = best;
+  state = 'playing';
+  lastTime = performance.now();
+  initGame();
+  raf = requestAnimationFrame(draw);
+});
+
+document.getElementById('restart-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('gameover-screen').style.display = 'none';
+  state = 'playing';
+  lastTime = performance.now();
+  initGame();
+  raf = requestAnimationFrame(draw);
+});
+
+// ════════════════════════════════════════════════════
+//  アイドルプレビュー
+// ════════════════════════════════════════════════════
+(function idlePreview() {
+  const bg = ctx.createLinearGradient(0, 0, 0, CH);
+  bg.addColorStop(0, '#020205'); bg.addColorStop(1, '#080814');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, CW, CH);
+  for (let i = 0; i < 8; i++) {
+    const w  = INIT_W - i * 16;
+    const bx = GX_MIN + (GAME_W - w) / 2 + (i % 2 === 0 ? 5 : -5);
+    const sy = CH - 28 - (i+1) * BLOCK_H;
+    drawIsoBlock(bx, sy, w, i, 0.6 - i * 0.055, false);
+  }
+})();
+</script>
+</body>
+</html>
