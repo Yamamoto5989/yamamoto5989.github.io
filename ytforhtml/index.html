@@ -261,14 +261,6 @@
     </div>
   </div>
 
-  <!-- フルスクリーンオーバーレイ -->
-  <div id="overlay">
-    <div id="overlay-player-container">
-      <button id="btn-close">✕</button>
-      <div id="overlay-player"></div>
-    </div>
-  </div>
-
   <script>
     const API_KEY       = 'AIzaSyD_l2jYnrI2l7n-n9xqMePiFX-Asab-NnU';
     let smallPlayer, overlayPlayer, currentVideoId;
@@ -283,7 +275,7 @@
         playerVars: { autoplay:0, controls:1, rel:0, modestbranding:1 }
       });
       overlayPlayer = new YT.Player('overlay-player', {
-        host: 'https://www.youtube-nocookie.com',
+        host: 'https://www.youtube.com',
         playerVars: { autoplay:0, controls:1, rel:0, modestbranding:1 }
       });
     }
