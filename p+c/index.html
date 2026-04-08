@@ -102,7 +102,7 @@
         const day   = now.getDate();
         const weekNames = ['(日)','(月)','(火)','(水)','(木)','(金)','(土)'];
         const wd = weekNames[now.getDay()];
-        dateEl.textContent = `${month}月${day}日　${wd}`;
+        dateEl.textContent = `${month}月${day}日 ${wd}`;
       }
       setInterval(updateDateTime, 1000);
       updateDateTime();
