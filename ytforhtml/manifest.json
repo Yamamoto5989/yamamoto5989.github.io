@@ -1,0 +1,15 @@
+{
+  "name": "YouTube for HTML",
+  "short_name": "YouTube for HTML",
+  "theme_color": "##FF0033",
+  "background_color": "##FF0033",
+  "display": "standalone",
+  "start_url": "index.html",
+  "icons": [
+    {
+      "src": "ytforhtml_Icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
