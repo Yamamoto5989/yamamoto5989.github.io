@@ -1,0 +1,15 @@
+{
+  "name": "Picture+Clock",
+  "short_name": "Picture+Clock",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "index.html",
+  "icons": [
+    {
+      "src": "Picture+Clock_Icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
