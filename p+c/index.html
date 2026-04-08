@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Picture+Clock</title>
+  <link rel="manifest" href="manifest.json>
+  <style>
+    /* 全体リセット */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width:100%; height:100%; overflow:hidden; }
+
+    /* スライドショー */
+    #slideshow {
+      position:fixed; top:0; left:0;
+      width:100vw; height:100vh;
+      background-position:center;
+      background-size:cover;
+      transition: background-image 1s ease-in-out;
+      z-index:1;
+    }
+
+    /* オーバーレイ（初回タップで画像選択） */
+    #overlay {
+      position:fixed; top:0; left:0;
+      width:100%; height:100%;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.6); color:#fff;
+      text-align:center; padding:20px; font-size:1.4em;
+      z-index:2; user-select:none; cursor:pointer;
+    }
+
+    /* 時計＋日付のコンテナ */
+    #datetime {
+      position:fixed; top:100px; left:50%;
+      transform:translateX(-50%);
+      text-align:center; z-index:3;
+      user-select:none;
+    }
+
+    /* 時刻表示 */
+    #clock {
+      color:#fff;
+      font-family:'Courier New',monospace;
+      font-size:8em;             /* さらに大きく調整可 */
+      text-shadow:0 0 5px rgba(0,0,0,0.7);
+    }
+
+    /* 月日曜日表示 */
+    #date {
+      color:#fff;
+      font-size:3em;           /* 時刻より小さく */
+      margin-top:10px;
+      text-shadow:0 0 3px rgba(0,0,0,0.5);
+    }
+
+    /* ファイル入力は隠す */
+    #fileInput { display:none; }
+  </style>
+</head>
+<body>
+
+  <input type="file" id="fileInput" accept="image/*" multiple />
+
+  <div id="slideshow"></div>
+  <div id="overlay">画面をタップして<br>画像を選択してください</div>
+
+  <div id="datetime">
+    <div id="clock">--:--</div>
+    <div id="date">--</div>
+  </div>
+
+  <script>
+    (function() {
+      const input   = document.getElementById('fileInput');
+      const slide   = document.getElementById('slideshow');
+      const overlay = document.getElementById('overlay');
+      const clockEl = document.getElementById('clock');
+      const dateEl  = document.getElementById('date');
+      let images = [], idx = 0;
+      const CHANGE_INTERVAL = 30000; // 30秒
+
+      // 時刻＋日付更新
+      function updateDateTime() {
+        const now = new Date();
+        // 時刻（hh:mm）
+        const hh = String(now.getHours()).padStart(2,'0');
+        const mm = String(now.getMinutes()).padStart(2,'0');
+        clockEl.textContent = `${hh}:${mm}`;
+
+        // 日付（M月D日 曜日）
+        const month = now.getMonth() + 1;
+        const day   = now.getDate();
+        const weekNames = ['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
+        const wd = weekNames[now.getDay()];
+        dateEl.textContent = `${month}月${day}日　${wd}`;
+      }
+      setInterval(updateDateTime, 1000);
+      updateDateTime();
+
+      // 次スライド表示
+      function showNext() {
+        if (!images.length) return;
+        slide.style.backgroundImage = `url("${images[idx]}")`;
+        idx = (idx + 1) % images.length;
+      }
+
+      // 初回タップでファイル選択を呼び出し
+      ['click','touchstart'].forEach(evt =>
+        overlay.addEventListener(evt, ()=> input.click(), {passive:true})
+      );
+
+      // ファイル選択後の処理
+      input.addEventListener('change', () => {
+        if (!input.files.length) return;
+        images = Array.from(input.files).map(f => URL.createObjectURL(f));
+        overlay.style.display = 'none';
+        showNext();
+        setInterval(showNext, CHANGE_INTERVAL);
+      });
+    })();
+  </script>
+</body>
+</html>
