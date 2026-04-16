@@ -94,6 +94,8 @@
     const context = canvas.getContext('2d');
     const eraserPreview = document.getElementById('eraserPreview');
     const container = document.getElementById('canvasContainer');
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
     /* 
       resizeCanvas の仕様：
