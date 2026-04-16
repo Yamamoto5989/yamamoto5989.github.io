@@ -130,6 +130,9 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
     let drawing = false;
     let erasing = false;
     let lineWidth = 10; // 初期太さ10px
