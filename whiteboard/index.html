@@ -236,7 +236,8 @@
     });
     document.getElementById('clear').addEventListener('click', () => {
       pushUndoState();
-      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = 'white';
+      context.fillRect(0, 0, canvas.width, canvas.height);
     });
     document.getElementById('download').addEventListener('click', () => {
       const viewWidth = window.innerWidth;
