@@ -22,7 +22,7 @@
       background-color: #f5f5f5;
       font-family: 'GoogleSans';
     }
-    #startBtn ,#playingbtn {
+    button {
       margin-bottom: 10px;
       padding: 10px 20px;
       font-size: 16px;
@@ -205,7 +205,7 @@
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(updateStopwatch, 100);
         isGameActive = true;
-        btn.innerHTML = "<button id="playingbtn">プレイ中</button>";
+        btn.innerHTML = "<button>プレイ中</button>";
       });
     });
   </script>
