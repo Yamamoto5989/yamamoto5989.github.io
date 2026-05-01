@@ -59,7 +59,9 @@
   </style>
 </head>
 <body>
+  <div id="btn">
   <button id="startBtn">スタート</button>
+  </div>
   <div id="stopwatch">0:00.0</div>
   <div class="puzzle-container">
     <!-- 1～15の数字タイルと1つの空タイル -->
@@ -88,6 +90,7 @@
       const tiles = Array.from(document.querySelectorAll(".tile"));
       const startBtn = document.getElementById("startBtn");
       const stopwatchDisplay = document.getElementById("stopwatch");
+      const btn = document.getElementById("btn");
 
       let isGameActive = false;
       let timerInterval;
@@ -202,6 +205,7 @@
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(updateStopwatch, 100);
         isGameActive = true;
+        btn.innerHTML = "プレイ中";
       });
     });
   </script>
