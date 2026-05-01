@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>スライドパズル</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f5f5f5;
+      font-family: Arial, sans-serif;
+    }
+    #startBtn {
+      margin-bottom: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #stopwatch {
+      margin-bottom: 20px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .puzzle-container {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      grid-template-rows: repeat(4, 100px);
+      gap: 5px;
+    }
+    .tile {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #3498db;
+      color: white;
+      font-size: 24px;
+      width: 100%;
+      height: 100px;
+      user-select: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .tile.empty {
+      background-color: transparent;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <button id="startBtn">スタート</button>
+  <div id="stopwatch">0:00.0</div>
+  <div class="puzzle-container">
+    <!-- 1～15の数字タイルと1つの空タイル -->
+    <div class="tile" data-value="1">1</div>
+    <div class="tile" data-value="2">2</div>
+    <div class="tile" data-value="3">3</div>
+    <div class="tile" data-value="4">4</div>
+    <div class="tile" data-value="5">5</div>
+    <div class="tile" data-value="6">6</div>
+    <div class="tile" data-value="7">7</div>
+    <div class="tile" data-value="8">8</div>
+    <div class="tile" data-value="9">9</div>
+    <div class="tile" data-value="10">10</div>
+    <div class="tile" data-value="11">11</div>
+    <div class="tile" data-value="12">12</div>
+    <div class="tile" data-value="13">13</div>
+    <div class="tile" data-value="14">14</div>
+    <div class="tile" data-value="15">15</div>
+    <div class="tile empty" data-value="0"></div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const gridSize = 4;
+      const puzzleContainer = document.querySelector(".puzzle-container");
+      const tiles = Array.from(document.querySelectorAll(".tile"));
+      const startBtn = document.getElementById("startBtn");
+      const stopwatchDisplay = document.getElementById("stopwatch");
+
+      let isGameActive = false;
+      let timerInterval;
+      let startTime;
+
+      // [共通関数] 経過秒数を「分:秒.0」形式に変換する関数
+      function formatTime(timeInSeconds) {
+        const minutes = Math.floor(timeInSeconds / 60);
+        const sec = timeInSeconds % 60;
+        // 整数部分を2桁に（例：5 → "05"）
+        const secInt = Math.floor(sec).toString().padStart(2, "0");
+        const fraction = (sec - Math.floor(sec)).toFixed(1).slice(1); // ".x"部分
+        return `${minutes}:${secInt}${fraction}`;
+      }
+
+      // 正解状態にリセットする関数
+      function resetPuzzle() {
+        for (let i = 0; i < tiles.length - 1; i++) {
+          tiles[i].setAttribute("data-value", i + 1);
+          tiles[i].textContent = i + 1;
+          tiles[i].classList.remove("empty");
+        }
+        // 最後のタイルは空
+        tiles[tiles.length - 1].setAttribute("data-value", "0");
+        tiles[tiles.length - 1].textContent = "";
+        tiles[tiles.length - 1].classList.add("empty");
+      }
+
+      // ストップウォッチを更新する関数
+      function updateStopwatch() {
+        const elapsed = (Date.now() - startTime) / 1000;
+        stopwatchDisplay.textContent = formatTime(elapsed);
+      }
+
+      // パズルクリアかチェックする関数
+      function checkPuzzleComplete() {
+        for (let i = 0; i < tiles.length - 1; i++) {
+          if (tiles[i].getAttribute("data-value") !== String(i + 1)) {
+            return false;
+          }
+        }
+        return tiles[tiles.length - 1].getAttribute("data-value") === "0";
+      }
+
+      // タイル移動（タイルの数値とクラスの入れ替え）関数
+      function moveTile(clickedTile) {
+        if (clickedTile.classList.contains("empty")) return;
+        const clickedIndex = tiles.indexOf(clickedTile);
+        const emptyIndex = tiles.findIndex(tile => tile.classList.contains("empty"));
+
+        const clickedRow = Math.floor(clickedIndex / gridSize);
+        const clickedCol = clickedIndex % gridSize;
+        const emptyRow = Math.floor(emptyIndex / gridSize);
+        const emptyCol = emptyIndex % gridSize;
+
+        // マンハッタン距離が1なら隣接している
+        if (Math.abs(clickedRow - emptyRow) + Math.abs(clickedCol - emptyCol) === 1) {
+          const clickedValue = clickedTile.getAttribute("data-value");
+          // クリックされたタイルを空タイルにする
+          clickedTile.setAttribute("data-value", "0");
+          clickedTile.textContent = "";
+          clickedTile.classList.add("empty");
+
+          // 元の空タイルにクリックされたタイルの値を移動
+          const emptyTile = tiles[emptyIndex];
+          emptyTile.setAttribute("data-value", clickedValue);
+          emptyTile.textContent = clickedValue;
+          emptyTile.classList.remove("empty");
+
+          // ゲーム中の場合、クリアチェック
+          if (isGameActive && checkPuzzleComplete()) {
+            clearInterval(timerInterval);
+            isGameActive = false;
+            const elapsedTime = (Date.now() - startTime) / 1000;
+            alert("クリアしました！お疲れ様でした！タイム：" + formatTime(elapsedTime));
+          }
+        }
+      }
+
+      // パズルエリアのクリックイベント
+      puzzleContainer.addEventListener("click", (event) => {
+        const clickedTile = event.target;
+        if (!clickedTile.classList.contains("tile")) return;
+        if (!isGameActive) return;  // ゲーム開始中のみタイル移動有効
+        moveTile(clickedTile);
+      });
+
+      // 合法な手順によるシャッフル
+      function shufflePuzzle(steps) {
+        for (let i = 0; i < steps; i++) {
+          const emptyIndex = tiles.findIndex(tile => tile.classList.contains("empty"));
+          const emptyRow = Math.floor(emptyIndex / gridSize);
+          const emptyCol = emptyIndex % gridSize;
+          const validIndexes = [];
+          if (emptyCol > 0) validIndexes.push(emptyIndex - 1);                // 左
+          if (emptyCol < gridSize - 1) validIndexes.push(emptyIndex + 1);        // 右
+          if (emptyRow > 0) validIndexes.push(emptyIndex - gridSize);            // 上
+          if (emptyRow < gridSize - 1) validIndexes.push(emptyIndex + gridSize);   // 下
+
+          const randomIndex = validIndexes[Math.floor(Math.random() * validIndexes.length)];
+          moveTile(tiles[randomIndex]);
+        }
+      }
+
+      // スタートボタンのクリック処理（リセット、シャッフル＆タイマー開始）
+      startBtn.addEventListener("click", () => {
+        resetPuzzle();
+        shufflePuzzle(100);
+
+        startTime = Date.now();
+        stopwatchDisplay.textContent = "0:00.0";
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(updateStopwatch, 100);
+        isGameActive = true;
+      });
+    });
+  </script>
+</body>
+</html>
