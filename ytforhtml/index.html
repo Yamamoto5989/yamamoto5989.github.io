@@ -9,7 +9,7 @@
   <title>YouTube for HTML</title>
 
   <!-- YouTube IFrame Player API -->
-  <script src="https://www.youtube-nocookie.com/iframe_api"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -274,11 +274,11 @@
     // YouTube IFrame API ready
     function onYouTubeIframeAPIReady() {
       smallPlayer = new YT.Player('player', {
-        host: 'https://youtube-nocookie.com',
+        host: 'https://youtube.com',
         playerVars: { autoplay:0, controls:1, rel:0, modestbranding:1 }
       });
       overlayPlayer = new YT.Player('overlay-player', {
-        host: 'https://youtube-nocookie.com',
+        host: 'https://youtube.com',
         playerVars: { autoplay:0, controls:1, rel:0, modestbranding:1 }
       });
     }
