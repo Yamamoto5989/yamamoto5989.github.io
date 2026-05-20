@@ -1,0 +1,153 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColorClocks</title>
+    <style>
+@font-face {
+ font-family: 'GoogleSans';
+ src: url('https://yamamoto5989.github.io/GoogleSans-Medium.ttf') format('truetype');
+ font-weight: normal;
+ font-style: normal;
+}
+
+      body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+  transition: background-color 0.3s ease; 
+}
+
+#clockBackground {
+  width: 90vw;
+  height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22vw;
+  
+  /* 【修正箇所1】Androidの描画バグを引き起こす原因になりやすいため、
+     外部ライブラリが必要な paint(smooth-corners) は一旦コメントアウトします。
+     border-radius だけで十分に角丸になります。 */
+  /* --smooth-corners: 12, 5; */
+  /* mask-image: paint(smooth-corners); */
+  /* -webkit-mask-image: paint(smooth-corners); */
+  
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#timeText {
+  font-size: 19vw;
+  font-weight: 700;
+  font-family: 'GoogleSans';
+  
+  /* 【修正箇所2】ここが一番の要因です。
+     position: relative; を追加することで、初めて z-index が有効になり、
+     文字が一番手前に表示されるようになります。 */
+  position: relative; 
+  z-index: 10; 
+  
+  /* 【修正箇所3】Androidの描画を安定させる魔法のコード（ハードウェア・アクセラレーションを強制） */
+  transform: translateZ(0);
+  
+  transition: color 0.3s ease;
+  
+  /* 文字の上をタップしても背景のクリック判定が通るようにする */
+  pointer-events: none; 
+}
+    </style>
+  </head>
+  <body>
+    <div id="clockBackground">
+      <md-ripple></md-ripple>
+      <div id="timeText"></div>
+    </div>
+
+    <script>
+      const clockBg = document.getElementById('clockBackground');
+      const timeText = document.getElementById('timeText');
+      let lastTimeString = "";
+      
+      // 4つのテーマ（ボディ背景、文字色、グラデーション色）を配列で定義
+      const themes = [
+        {
+          name: "Blue",
+          bodyBg: "#ffffff",
+          textColor: "#ffffff",
+          colors: ["rgba(20, 127, 255, 1)", "rgba(0, 108, 238, 1)", "rgba(0, 87, 190, 1)", "rgba(0, 63, 137, 1)"]
+        },
+        {
+          name: "Red",
+          bodyBg: "#2b2b2b",
+          textColor: "#2b2b2b",
+          colors: ["rgba(247, 77, 77, 1)", "rgba(245, 56, 56, 1)", "rgba(190, 0, 0, 1)", "rgba(137, 0, 7, 1)"]
+        },
+        {
+          name: "Green",
+          bodyBg: "#ffffff",
+          textColor: "#ffffff",
+          colors: ["rgba(0, 212, 0, 1)", "rgba(2, 179, 2, 1)", "rgba(3, 145, 3, 1)", "rgba(1, 112, 1, 1)"]
+        },
+        {
+          name: "Yellow",
+          bodyBg: "#2b2b2b",
+          textColor: "#2b2b2b",
+          colors: ["rgba(252, 195, 35, 1)", "rgba(245, 181, 7, 1)", "rgba(181, 134, 4, 1)", "rgba(148, 109, 3, 1)"]
+        }
+      ];
+
+      // 現在選択されているテーマのインデックス (0: Blue, 1: Green, 2: Red, 3: Yellow)
+      let currentThemeIndex = 0;
+
+      // 静的な色（背景色と文字色）を切り替える関数
+      function applyThemeStyles() {
+        const currentTheme = themes[currentThemeIndex];
+        document.body.style.backgroundColor = currentTheme.bodyBg;
+        timeText.style.color = currentTheme.textColor;
+      }
+
+      // 画面タップ（クリック）時にテーマのインデックスを進める
+      clockBg.addEventListener('click', () => {
+        currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+        applyThemeStyles();
+      });
+
+      // 時計の更新とアニメーション
+      function updateTime() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
+  
+        // 秒数から角度を計算
+        const degree = (seconds / 60) * 360;
+        
+        // 現在のテーマに応じたグラデーションを適用
+        const currentTheme = themes[currentThemeIndex];
+        const c = currentTheme.colors;
+        clockBg.style.background = `conic-gradient(from ${degree}deg, ${c[0]} 0deg, ${c[1]} 180deg, ${c[2]} 274deg, ${c[3]} 360deg)`;
+  
+        // 時間のテキスト更新（変更があった時だけDOMを書き換えてスマホの負荷を軽減）
+        const currentTimeString = `${hours}:${minutes}`;
+        if (lastTimeString !== currentTimeString) {
+          timeText.textContent = currentTimeString;
+          lastTimeString = currentTimeString;
+        }
+  
+        requestAnimationFrame(updateTime);
+      }
+
+      // 初回実行
+      applyThemeStyles();
+      updateTime();
+    </script>
+  </body>
+</html>
