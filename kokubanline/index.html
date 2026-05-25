@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>黒板タイムライン</title>
+    <title>黒板ライン</title>
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7f7f7; color: #333; }
         h1 { text-align: center; font-size: 1.5em; color: #444; margin-bottom: 5px; }
@@ -38,7 +38,7 @@
 </head>
 <body>
 
-    <h1>黒板タイムライン</h1>
+    <h1>黒板ライン</h1>
     <div class="system-msg">200文字制限 / 5MBまでの画像送信可能 / 最大500件表示</div>
     
     <div class="input-area">
@@ -55,7 +55,7 @@
     <div id="postsContainer"></div>
 
     <script>
-        // APIのURL（環境に合わせて書き換えてください）
+        // あなたのngrok固定URLをあらかじめ設定しておきました
         const API_URL = 'https://icily-uncohesive-delois.ngrok-free.dev/api/posts';
 
         // 文字数カウンターの更新
@@ -76,9 +76,7 @@
         function jumpToPost(num) {
             const target = document.getElementById(`post-${num}`);
             if (target) {
-                // スムーズにスクロール
                 target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // 一瞬背景色を変える演出
                 target.classList.add('highlight');
                 setTimeout(() => target.classList.remove('highlight'), 1500);
             } else {
@@ -99,15 +97,21 @@
         // エスケープ処理 ＆ 「>>番号」をリンクに変換する処理
         function processText(str) {
             if (!str) return '';
-            // まずHTMLエスケープ
             let escaped = str.replace(/[&<>'"]/g, tag => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             }[tag] || tag));
 
-            // 「>>数字」を、クリックするとjumpToPostを実行するaタグに置換
             return escaped.replace(/&gt;&gt;(\d+)/g, (match, num) => {
                 return `<a class="anchor-link" onclick="jumpToPost(${num})">&gt;&gt;${num}</a>`;
             });
+        }
+
+        // 安全にテキストをエスケープする関数
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
         }
 
         // タイムラインの取得
@@ -124,23 +128,7 @@
                             <div class="post-header">
                                 <div>
                                     <span class="num-link" onclick="addAnchor(${post.id})">#${post.id}</span>
-                                    // 【一時的にシンプルな記述に書き換えて試す】
-container.innerHTML = posts.map(post => {
-    const imgTag = post.image ? `<img src="${post.image}" class="post-img" />` : '';
-    return `
-        <div class="post" id="post-${post.id}">
-            <div class="post-header">
-                <div>
-                    <span class="num-link" onclick="addAnchor(${post.id})">#${post.id}</span>
-                    <span class="name">${post.name}</span>
-                </div>
-                <span class="date">${new Date(post.created_at).toLocaleString()}</span>
-            </div>
-            <div class="content">${processText(post.content)}</div>
-            ${imgTag}
-        </div>
-    `;
-}).join('');
+                                    <span class="name">${escapeHTML(post.name)}</span>
                                 </div>
                                 <span class="date">${new Date(post.created_at).toLocaleString()}</span>
                             </div>
@@ -204,7 +192,7 @@ container.innerHTML = posts.map(post => {
         // 初期読み込み
         fetchPosts();
         
-        // リアルタイム更新（3秒ごと）をしたい場合は、下の行のコメントアウト(//)を消してください
+        // 3秒ごとに自動リロードを有効化
         setInterval(fetchPosts, 3000);
     </script>
 </body>
