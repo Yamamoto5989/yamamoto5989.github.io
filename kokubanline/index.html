@@ -2,38 +2,104 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>黒板ライン</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7f7f7; color: #333; }
-        h1 { text-align: center; font-size: 1.5em; color: #444; margin-bottom: 5px; }
-        .system-msg { text-align: center; font-size: 0.8em; color: #888; margin-bottom: 20px; }
+        /* 全体のスマートフォン最適化 */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            padding: 10px; 
+            background-color: #7493c7; /* LINE風の背景色 */
+            color: #333; 
+        }
+        h1 { text-align: center; font-size: 1.3em; color: white; margin: 10px 0 2px 0; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .system-msg { text-align: center; font-size: 0.75em; color: #eee; margin-bottom: 15px; }
         
-        /* 投稿フォーム */
-        .input-area { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
-        textarea { width: 100%; height: 70px; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; resize: none; margin-bottom: 2px; }
-        .counter { text-align: right; font-size: 0.8em; color: #888; margin-bottom: 10px; }
-        .file-wrapper { margin-top: 10px; font-size: 0.9em; color: #555; }
-        button { background-color: #28a745; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        button:hover { background-color: #218838; }
+        /* 投稿フォームのコンパクト化 */
+        .input-area { 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 12px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            margin-bottom: 15px; 
+        }
+        input[type="text"] { 
+            width: 100%; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            margin-bottom: 8px; 
+            font-size: 16px; /* iOSの自動ズーム防止のために16px以上 */
+        }
+        textarea { 
+            width: 100%; 
+            height: 60px; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            resize: none; 
+            margin-bottom: 2px; 
+            font-size: 16px; 
+        }
+        .counter { text-align: right; font-size: 0.75em; color: #888; margin-bottom: 8px; }
+        .file-wrapper { 
+            background: #f0f0f0; 
+            padding: 8px; 
+            border-radius: 6px; 
+            font-size: 0.85em; 
+            color: #444; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+        }
+        .file-wrapper input { font-size: 0.9em; max-width: 70%; }
+        
+        /* 親指で押しやすい大きな送信ボタン */
+        button { 
+            background-color: #53b642; 
+            color: white; 
+            border: none; 
+            padding: 12px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1em; 
+            width: 100%; 
+            margin-top: 10px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            -webkit-tap-highlight-color: transparent; 
+        }
+        button:active { background-color: #459d36; }
 
-        /* タイムライン */
-        .post { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 12px; transition: background-color 0.5s; }
-        .post-header { display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 8px; }
-        .num-link { color: #888; text-decoration: none; font-weight: bold; cursor: pointer; margin-right: 5px; }
-        .num-link:hover { text-decoration: underline; color: #007bff; }
-        .name { font-weight: bold; color: #007bff; }
-        .date { color: #999; }
-        .content { white-space: pre-wrap; word-break: break-all; line-height: 1.4; }
+        /* タイムライン（吹き出し・カード風） */
+        #postsContainer { display: flex; flex-direction: column; }
+        .post { 
+            background: white; 
+            padding: 12px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
+            margin-bottom: 10px; 
+            transition: background-color 0.5s; 
+            position: relative; 
+        }
+        .post-header { display: flex; justify-content: space-between; font-size: 0.8em; margin-bottom: 6px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
+        .num-link { color: #888; text-decoration: none; font-weight: bold; cursor: pointer; padding: 2px 6px; background: #eee; border-radius: 4px; }
+        .name { font-weight: bold; color: #3b5998; margin-left: 5px; }
+        .date { color: #aaa; }
+        .content { white-space: pre-wrap; word-break: break-all; line-height: 1.5; font-size: 0.95em; color: #222; }
         
-        /* アンカー（>>番号）リンクのスタイル */
-        .anchor-link { color: #ff5722; text-decoration: none; font-weight: bold; cursor: pointer; }
-        .anchor-link:hover { text-decoration: underline; }
-        .post-img { max-width: 100%; max-height: 350px; margin-top: 10px; border-radius: 6px; display: block; border: 1px solid #eee; }
+        /* アンカーリンク */
+        .anchor-link { color: #ff5722; text-decoration: none; font-weight: bold; cursor: pointer; padding: 0 2px; }
         
-        /* ジャンプした時の強調演出 */
-        .highlight { background-color: #fff9c4; }
+        /* スマホ画面からはみ出さない画像 */
+        .post-img { max-width: 100%; max-height: 250px; object-fit: contain; margin-top: 8px; border-radius: 8px; display: block; }
+        
+        /* ジャンプ強調 */
+        .highlight { background-color: #fff9c4; transform: scale(1.02); transition: all 0.2s; }
     </style>
 </head>
 <body>
@@ -42,11 +108,11 @@
     <div class="system-msg">200文字制限 / 5MBまでの画像送信可能 / 最大500件表示</div>
     
     <div class="input-area">
-        <input type="text" id="nameInput" placeholder="ペンネーム（20文字以内 / 省略可）" maxlength="20">
-        <textarea id="contentInput" placeholder="メッセージを入力（画像のみもOK）" maxlength="200" oninput="updateCounter()"></textarea>
+        <input type="text" id="nameInput" placeholder="ペンネーム（20文字以内）" maxlength="20">
+        <textarea id="contentInput" placeholder="メッセージを入力..." maxlength="200" oninput="updateCounter()"></textarea>
         <div class="counter"><span id="charCount">0</span> / 200文字</div>
         <div class="file-wrapper">
-            <label>画像 (5MBまで): </label>
+            <label>画像 (5MBまで):</label>
             <input type="file" id="imageInput" accept="image/*">
         </div>
         <button onclick="submitPost()">送信する</button>
@@ -57,13 +123,11 @@
     <script>
         const API_URL = 'https://icily-uncohesive-delois.ngrok-free.dev/api/posts';
 
-        // 文字数カウンターの更新
         function updateCounter() {
             const len = document.getElementById('contentInput').value.length;
             document.getElementById('charCount').textContent = len;
         }
 
-        // メッセージ番号をクリックしたときに、入力欄に「>> 番号」を挿入する
         function addAnchor(num) {
             const textarea = document.getElementById('contentInput');
             textarea.value = `>>${num} \n` + textarea.value;
@@ -71,7 +135,6 @@
             updateCounter();
         }
 
-        // 指定した番号のメッセージにジャンプする
         function jumpToPost(num) {
             const target = document.getElementById(`post-${num}`);
             if (target) {
@@ -83,7 +146,6 @@
             }
         }
 
-        // 画像のBase64変換
         function convertToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -93,7 +155,6 @@
             });
         }
 
-        // エスケープ処理 ＆ 「>>番号」をリンクに変換する処理
         function processText(str) {
             if (!str) return '';
             let escaped = str.replace(/[&<>'"]/g, tag => ({
@@ -105,7 +166,6 @@
             });
         }
 
-        // 安全にテキストをエスケープする関数
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>'"]/g, tag => ({
@@ -113,10 +173,15 @@
             }[tag] || tag));
         }
 
-        // タイムラインの取得
+        // UTCの時刻文字列を、スマホ（閲覧環境）のローカル時刻に変換する関数
+        function formatLocalTime(utcTimeString) {
+            // SQLiteの「YYYY-MM-DD HH:MM:SS」形式をJSが認識できる形式に補正
+            const utcDate = new Date(utcTimeString.replace(' ', 'T') + 'Z');
+            return utcDate.toLocaleString(); // 自動で日本時間に変換されます
+        }
+
         async function fetchPosts() {
             try {
-                // ★ ngrokの警告画面をスキップするヘッダーを付与
                 const response = await fetch(API_URL, {
                     headers: { 'ngrok-skip-browser-warning': 'true' }
                 });
@@ -132,7 +197,7 @@
                                     <span class="num-link" onclick="addAnchor(${post.id})">#${post.id}</span>
                                     <span class="name">${escapeHTML(post.name)}</span>
                                 </div>
-                                <span class="date">${new Date(post.created_at).toLocaleString()}</span>
+                                <span class="date">${formatLocalTime(post.created_at)}</span>
                             </div>
                             <div class="content">${processText(post.content)}</div>
                             ${imgTag}
@@ -144,7 +209,6 @@
             }
         }
 
-        // メッセージ・画像の送信
         async function submitPost() {
             const name = document.getElementById('nameInput').value;
             const content = document.getElementById('contentInput').value;
@@ -172,7 +236,6 @@
             }
 
             try {
-                // ★ 送信時にもスキップ用のヘッダーを付与
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 
@@ -195,10 +258,7 @@
             }
         }
 
-        // 初期読み込み
         fetchPosts();
-        
-        // 3秒ごとに自動リロード
         setInterval(fetchPosts, 1000);
     </script>
 </body>
