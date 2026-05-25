@@ -55,7 +55,6 @@
     <div id="postsContainer"></div>
 
     <script>
-        // あなたのngrok固定URLをあらかじめ設定しておきました
         const API_URL = 'https://icily-uncohesive-delois.ngrok-free.dev/api/posts';
 
         // 文字数カウンターの更新
@@ -117,7 +116,10 @@
         // タイムラインの取得
         async function fetchPosts() {
             try {
-                const response = await fetch(API_URL);
+                // ★ ngrokの警告画面をスキップするヘッダーを付与
+                const response = await fetch(API_URL, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
                 const posts = await response.json();
                 const container = document.getElementById('postsContainer');
                 
@@ -170,9 +172,13 @@
             }
 
             try {
+                // ★ 送信時にもスキップ用のヘッダーを付与
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
                     body: JSON.stringify({ name, content, image: base64Image })
                 });
 
@@ -192,7 +198,7 @@
         // 初期読み込み
         fetchPosts();
         
-        // 3秒ごとに自動リロードを有効化
+        // 3秒ごとに自動リロード
         setInterval(fetchPosts, 3000);
     </script>
 </body>
