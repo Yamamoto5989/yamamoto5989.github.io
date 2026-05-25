@@ -124,7 +124,23 @@
                             <div class="post-header">
                                 <div>
                                     <span class="num-link" onclick="addAnchor(${post.id})">#${post.id}</span>
-                                    <span class="name">${post.name.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]))}</span>
+                                    // 【一時的にシンプルな記述に書き換えて試す】
+container.innerHTML = posts.map(post => {
+    const imgTag = post.image ? `<img src="${post.image}" class="post-img" />` : '';
+    return `
+        <div class="post" id="post-${post.id}">
+            <div class="post-header">
+                <div>
+                    <span class="num-link" onclick="addAnchor(${post.id})">#${post.id}</span>
+                    <span class="name">${post.name}</span>
+                </div>
+                <span class="date">${new Date(post.created_at).toLocaleString()}</span>
+            </div>
+            <div class="content">${processText(post.content)}</div>
+            ${imgTag}
+        </div>
+    `;
+}).join('');
                                 </div>
                                 <span class="date">${new Date(post.created_at).toLocaleString()}</span>
                             </div>
