@@ -79,7 +79,7 @@
         button:active { background-color: #459d36; }
 
         /* タイムライン（吹き出し・カード風） */
-        #postsContainer { display: flex; flex-direction: column; }
+        #postsContainer { display: flex; flex-direction: column; z-index: 1;}
         .post { 
             background: white; 
             padding: 12px; 
@@ -88,6 +88,7 @@
             margin-bottom: 10px; 
             transition: background-color 0.5s; 
             position: relative; 
+            z-index: 0;
             }
         .post-header { display: flex; justify-content: space-between; font-size: 0.8em; margin-bottom: 6px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
         .num-link { color: #888; text-decoration: none; font-weight: bold; cursor: pointer; padding: 2px 6px; background: #eee; border-radius: 4px; }
