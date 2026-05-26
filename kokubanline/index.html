@@ -11,7 +11,7 @@
             max-width: 500px; 
             margin: 0 auto; 
             padding: 10px 10px 190px 10px; /* 下部フォームに被らないよう余白を確保 */
-            background-color: #fff; /* 背景を白に変更 */
+            background-color: #fff; 
             color: #333; 
         }
         h1 { text-align: center; font-size: 1.4em; color: #222; margin: 10px 0 2px 0; font-weight: bold; }
@@ -20,7 +20,7 @@
         /* タイムライン（メッセージ一覧） */
         #postsContainer { display: flex; flex-direction: column; }
         .post { 
-            background: #f8f9fa; /* メッセージカードは少しグレーにして視認性を向上 */
+            background: #f8f9fa; 
             padding: 12px; 
             border-radius: 12px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
@@ -141,13 +141,12 @@
             document.getElementById('charCount').textContent = len;
         }
 
+        // 修正：一番下までスクロールさせる命令（window.scrollTo）を削除しました
         function addAnchor(num) {
             const textarea = document.getElementById('contentInput');
             textarea.value = `>>${num} \n` + textarea.value;
             textarea.focus();
             updateCounter();
-            // フォームが見えるように一番下へスクロールを誘導
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
 
         function jumpToPost(num) {
@@ -170,21 +169,17 @@
             });
         }
 
-        // テキスト処理（エスケープ、>>リンク化、URL自動リンク化）
         function processText(str) {
             if (!str) return '';
             
-            // 1. まずHTMLエスケープをして安全にする
             let escaped = str.replace(/[&<>'"]/g, tag => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             }[tag] || tag));
 
-            // 2. 「>>数字」をアンカーリンクに変換
             escaped = escaped.replace(/&gt;&gt;(\d+)/g, (match, num) => {
                 return `<a class="anchor-link" onclick="jumpToPost(${num})">&gt;&gt;${num}</a>`;
             });
 
-            // 3. URL（http:// または https://）を自動でリンクタグに変換
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             return escaped.replace(urlRegex, (url) => {
                 return `<a class="auto-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
@@ -282,7 +277,9 @@
         }
 
         fetchPosts();
-        setInterval(fetchPosts, 500);
+        
+        // 修正：1秒毎（1000ミリ秒）に自動読み込みをするよう変更しました
+        setInterval(fetchPosts, 1000);
     </script>
 </body>
 </html>
