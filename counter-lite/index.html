@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>カウンターLite</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      box-sizing: border-box;
+      padding-bottom: 2vh;
+    }
+
+    #counter {
+      font-size: 10vw;
+      margin-bottom: 20px;
+      user-select: none;
+    }
+
+    #buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .arrow-button {
+      font-size: 8vw;
+      width: 80vw;
+      padding: 20px;
+      cursor: pointer;
+    }
+
+    #reset {
+      font-size: 6vw;
+      width: 60vw;
+      padding: 15px;
+      margin-top: 40px;
+      cursor: pointer;
+    }
+
+    /* 縦画面スマホ向け調整 */
+    @media (orientation: portrait) {
+      #counter {
+        font-size: 20vw;
+      }
+
+      .arrow-button {
+        font-size: 10vw;
+        width: 60vw;
+        padding: 15px;
+      }
+
+      #reset {
+        font-size: 8vw;
+        width: 50vw;
+        padding: 10px;
+        margin-top: 20vw; /* 上下ボタン間と同じくらいのマージン */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="counter">0</div>
+    <div id="buttons">
+      <button id="increment" class="arrow-button" tabindex="-1">▲</button>
+      <button id="decrement" class="arrow-button" tabindex="-1">▼</button>
+    </div>
+    <button id="reset" tabindex="-1">リセット</button>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const counterDisplay = document.getElementById("counter");
+      const incrementBtn = document.getElementById("increment");
+      const decrementBtn = document.getElementById("decrement");
+      const resetBtn = document.getElementById("reset");
+
+      let count = 0;
+
+      function updateDisplay() {
+        counterDisplay.textContent = count;
+      }
+
+      incrementBtn.addEventListener("click", () => {
+        count++;
+        updateDisplay();
+      });
+
+      decrementBtn.addEventListener("click", () => {
+        count--;
+        updateDisplay();
+      });
+
+      resetBtn.addEventListener("click", () => {
+        if (window.confirm("リセットしますか？")) {
+          count = 0;
+          updateDisplay();
+        }
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.repeat) return;
+
+        if (event.key === " " || event.key === "Enter") {
+          count++;
+          updateDisplay();
+          event.preventDefault();
+        } else if (event.key === "Backspace" || event.key === "Delete") {
+          count--;
+          updateDisplay();
+          event.preventDefault();
+        } else if (event.key === "r" || event.key === "R") {
+          if (window.confirm("リセットしますか？")) {
+            count = 0;
+            updateDisplay();
+          }
+          event.preventDefault();
+        } else if (event.key === "Tab") {
+          event.preventDefault();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
