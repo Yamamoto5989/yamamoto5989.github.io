@@ -1,6 +1,6 @@
 {
-  "name": "Picture+Clock",
-  "short_name": "Picture+Clock",
+  "name": "カウンターLite",
+  "short_name": "カウンターLite",
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
   "display": "standalone",
