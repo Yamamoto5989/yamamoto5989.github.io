@@ -85,7 +85,7 @@
     <div class="tile" data-value="15">15</div>
     <div class="tile empty" data-value="0"></div>
   </div>
-<button id="reload" onclick="reset()">リセット</button>
+<button id="reload" onclick="if (confirm("リセットしますか？")) {window.location.reload();}">リセット</button>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const gridSize = 4;
@@ -98,13 +98,6 @@
       let isGameActive = false;
       let timerInterval;
       let startTime;
-
-      function reset()
-      {
-        if (confirm("リセットしますか？")) {
-          window.location.reload();
-        }
-      }
 
       // [共通関数] 経過秒数を「分:秒.0」形式に変換する関数
       function formatTime(timeInSeconds) {
