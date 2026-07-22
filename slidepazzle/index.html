@@ -27,6 +27,7 @@
     }
     button {
       margin-bottom: 10px;
+      margin-top: 10px;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
@@ -85,7 +86,7 @@
     <div class="tile" data-value="15">15</div>
     <div class="tile empty" data-value="0"></div>
   </div>
-<button id="reload" onclick="if (confirm("リセットしますか？")) {window.location.reload();}">リセット</button>
+<button id="reload" onclick="window.location.reload();">リセット</button>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const gridSize = 4;
