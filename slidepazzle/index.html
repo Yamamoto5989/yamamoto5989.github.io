@@ -85,7 +85,7 @@
     <div class="tile" data-value="15">15</div>
     <div class="tile empty" data-value="0"></div>
   </div>
-<button id="reload" onclick="reload()">リセット</button>
+<button id="reload" onclick="reset()">リセット</button>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const gridSize = 4;
@@ -99,7 +99,7 @@
       let timerInterval;
       let startTime;
 
-      function reload()
+      function reset()
       {
         if (confirm("リセットしますか？")) {
           window.location.reload();
