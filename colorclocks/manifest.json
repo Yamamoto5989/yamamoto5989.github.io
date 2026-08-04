@@ -1,0 +1,15 @@
+{
+  "name": "ColorClocks",
+  "short_name": "ColorClocks",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "index.html",
+  "icons": [
+    {
+      "src": "Colorclocks_Icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
