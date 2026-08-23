@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="calc-icon.png">
+<link rel="apple-touch-icon" href="calc-icon.png">
+<title>計算機</title>
+<style>
+  :root{
+    --bg:#000000;
+    --key-fn:#a5a5a5;
+    --key-fn-text:#000000;
+    --key-op:#ff9f0a;
+    --key-op-active:#ffd8a8;
+    --key-num:#333333;
+    --key-num-active:#737373;
+    --key-num-text:#ffffff;
+    --display-text:#ffffff;
+    --gap: 14px;
+
+    /* Fallback only — the real value is computed in JS from the actual
+       available width/height so keys reliably fill the width and the
+       keypad claims a fixed, predictable share of the height. */
+    --key-size: 70px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    overflow: hidden;
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    user-select: none;
+  }
+
+  .app {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Empty space above the display — kept modest so the keypad fills
+     most of the screen (this is an iPad-first design). */
+  .spacer { flex: 0.55 1 auto; min-height: 0; }
+
+  /* ===== Display ===== */
+  .display-wrap {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 8px 36px 12px;
+  }
+
+  .display {
+    color: var(--display-text);
+    font-weight: 200;
+    line-height: 1;
+    letter-spacing: -1px;
+    font-size: 64px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    direction: rtl;
+  }
+
+  /* ===== Keypad grid ===== */
+  .pad-area {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+    gap: var(--gap);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, var(--key-size));
+    grid-auto-rows: var(--key-size);
+    gap: var(--gap);
+  }
+
+  .sci-grid {
+    display: none;
+    grid-template-columns: repeat(5, var(--key-size));
+    grid-auto-rows: var(--key-size);
+    gap: var(--gap);
+  }
+
+  button.key {
+    border: none;
+    border-radius: 50%;
+    width: var(--key-size);
+    height: var(--key-size);
+    font-family: -apple-system, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: clamp(20px, 3vw, 34px);
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--key-num-text);
+    background: var(--key-num);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: filter .08s ease, background-color .08s ease;
+    padding: 0;
+    line-height: 1;
+  }
+  button.key:active,
+  button.key.pressed {
+    filter: brightness(1.4);
+  }
+
+  button.key.fn {
+    background: var(--key-fn);
+    color: var(--key-fn-text);
+    font-size: clamp(18px, 2.4vw, 28px);
+  }
+
+  button.key.op {
+    background: var(--key-op);
+    color: #fff;
+    font-weight: 400;
+  }
+  button.key.op.active {
+    background: #ffffff;
+    color: var(--key-op);
+  }
+
+  /* Zero key: pill spanning exactly 2 fixed-size columns + the gap
+     between them, so its edges line up exactly with the circles above. */
+  button.key.zero {
+    grid-column: span 2;
+    width: calc(var(--key-size) * 2 + var(--gap));
+    height: var(--key-size);
+    border-radius: 999px;
+    justify-content: flex-start;
+    padding-left: 32px;
+  }
+
+  button.key.sci {
+    font-size: clamp(13px, 1.6vw, 21px);
+    color: var(--key-num-text);
+    background: transparent;
+    font-weight: 300;
+  }
+  button.key.sci:active { filter: brightness(1.6); }
+
+  /* Landscape / iPad wide layout: show the scientific column. Sizing
+     itself is handled entirely by JS (sizeKeys). */
+  @media (min-width: 760px) and (orientation: landscape) {
+    .sci-grid { display: grid; }
+    .display-wrap { padding: 8px 40px 10px; }
+    .pad-area { padding: 0 20px calc(16px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="spacer"></div>
+
+  <div class="display-wrap">
+    <div class="display" id="display">0</div>
+  </div>
+
+  <div class="pad-area">
+    <div class="sci-grid" id="sciGrid">
+      <!-- scientific mode columns, iPad landscape only -->
+      <button class="key sci" data-action="paren-open">(</button>
+      <button class="key sci" data-action="paren-close">)</button>
+      <button class="key sci" data-action="mc">mc</button>
+      <button class="key sci" data-action="mplus">m+</button>
+      <button class="key sci" data-action="mminus">m-</button>
+
+      <button class="key sci" data-action="mr">mr</button>
+      <button class="key sci" data-action="pow2">x²</button>
+      <button class="key sci" data-action="pow3">x³</button>
+      <button class="key sci" data-action="powy">x^y</button>
+      <button class="key sci" data-action="powe">e^x</button>
+
+      <button class="key sci" data-action="tenpow">10^x</button>
+      <button class="key sci" data-action="inv">1/x</button>
+      <button class="key sci" data-action="sqrt2">²√x</button>
+      <button class="key sci" data-action="sqrt3">³√x</button>
+      <button class="key sci" data-action="sqrty">y√x</button>
+
+      <button class="key sci" data-action="ln">ln</button>
+      <button class="key sci" data-action="logy">log_y</button>
+      <button class="key sci" data-action="log10">log₁₀</button>
+      <button class="key sci" data-action="log2">log₂</button>
+      <button class="key sci" data-action="x!">x!</button>
+
+      <button class="key sci" data-action="sin">sin</button>
+      <button class="key sci" data-action="cos">cos</button>
+      <button class="key sci" data-action="tan">tan</button>
+      <button class="key sci" data-action="e">e</button>
+      <button class="key sci" data-action="ee">EE</button>
+    </div>
+
+    <div class="grid">
+      <button class="key fn" data-action="clear">AC</button>
+      <button class="key fn" data-action="negate">+/-</button>
+      <button class="key fn" data-action="percent">%</button>
+      <button class="key op" data-action="divide">÷</button>
+
+      <button class="key" data-action="7">7</button>
+      <button class="key" data-action="8">8</button>
+      <button class="key" data-action="9">9</button>
+      <button class="key op" data-action="multiply">×</button>
+
+      <button class="key" data-action="4">4</button>
+      <button class="key" data-action="5">5</button>
+      <button class="key" data-action="6">6</button>
+      <button class="key op" data-action="subtract">−</button>
+
+      <button class="key" data-action="1">1</button>
+      <button class="key" data-action="2">2</button>
+      <button class="key" data-action="3">3</button>
+      <button class="key op" data-action="add">+</button>
+
+      <button class="key zero" data-action="0">0</button>
+      <button class="key" data-action="decimal">.</button>
+      <button class="key op" data-action="equals">=</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const displayEl = document.getElementById('display');
+  const opButtons = document.querySelectorAll('.key.op');
+
+  let current = '0';
+  let previous = null;
+  let pendingOp = null;
+  let overwrite = true;
+  let memory = 0;
+
+  const MAX_DIGITS = 9;
+
+  function formatNumber(numStr){
+    if (numStr === 'Error') return numStr;
+    let num = parseFloat(numStr);
+    if (!isFinite(num)) return 'Error';
+
+    let str;
+    if (Number.isInteger(num) && Math.abs(num) < 1e15) {
+      str = num.toLocaleString('en-US', {maximumFractionDigits:0});
+    } else {
+      str = num.toLocaleString('en-US', {maximumFractionDigits:8});
+    }
+    return str;
+  }
+
+  function render(){
+    displayEl.textContent = formatNumber(current);
+  }
+
+  function clearAll(){
+    current = '0';
+    previous = null;
+    pendingOp = null;
+    overwrite = true;
+    setActiveOp(null);
+  }
+
+  function inputDigit(d){
+    if (overwrite){
+      current = (d === '.') ? '0.' : d;
+      overwrite = false;
+      return;
+    }
+    if (d === '.'){
+      if (!current.includes('.')) current += '.';
+      return;
+    }
+    let raw = current.replace(/,/g,'');
+    if (raw === '0') raw = d;
+    else raw += d;
+    let digitCount = raw.replace(/[-.]/g,'').length;
+    if (digitCount > MAX_DIGITS) return;
+    current = raw;
+  }
+
+  function negate(){
+    if (current === '0') return;
+    current = current.startsWith('-') ? current.slice(1) : '-' + current;
+  }
+
+  function percent(){
+    let raw = parseFloat(current.replace(/,/g,''));
+    raw = raw / 100;
+    current = String(raw);
+  }
+
+  function setActiveOp(action){
+    opButtons.forEach(b=>{
+      b.classList.toggle('active', b.dataset.action === action);
+    });
+  }
+
+  function compute(a, b, op){
+    switch(op){
+      case 'add': return a + b;
+      case 'subtract': return a - b;
+      case 'multiply': return a * b;
+      case 'divide': return b === 0 ? NaN : a / b;
+      default: return b;
+    }
+  }
+
+  function chooseOperator(action){
+    let raw = parseFloat(current.replace(/,/g,''));
+    if (pendingOp && !overwrite){
+      previous = compute(previous, raw, pendingOp);
+      current = isFinite(previous) ? String(previous) : 'Error';
+    } else {
+      previous = raw;
+    }
+    pendingOp = action;
+    overwrite = true;
+    setActiveOp(action);
+  }
+
+  function equals(){
+    if (pendingOp == null) return;
+    let raw = parseFloat(current.replace(/,/g,''));
+    let result = compute(previous, raw, pendingOp);
+    current = isFinite(result) ? String(result) : 'Error';
+    pendingOp = null;
+    previous = null;
+    overwrite = true;
+    setActiveOp(null);
+  }
+
+  function sciApply(action){
+    let x = parseFloat(current.replace(/,/g,'')) || 0;
+    let r = x;
+    switch(action){
+      case 'pow2': r = x*x; break;
+      case 'pow3': r = x*x*x; break;
+      case 'sqrt2': r = Math.sqrt(x); break;
+      case 'sqrt3': r = Math.cbrt(x); break;
+      case 'inv': r = x === 0 ? NaN : 1/x; break;
+      case 'ln': r = Math.log(x); break;
+      case 'log10': r = Math.log10(x); break;
+      case 'log2': r = Math.log2(x); break;
+      case 'sin': r = Math.sin(x); break;
+      case 'cos': r = Math.cos(x); break;
+      case 'tan': r = Math.tan(x); break;
+      case 'powe': r = Math.exp(x); break;
+      case 'tenpow': r = Math.pow(10, x); break;
+      case 'x!': {
+        if (x < 0 || !Number.isInteger(x)) { r = NaN; break; }
+        let f = 1; for(let i=2;i<=x;i++) f*=i; r = f; break;
+      }
+      case 'e': r = Math.E; break;
+      default: return;
+    }
+    current = isFinite(r) ? String(r) : 'Error';
+    overwrite = true;
+  }
+
+  function handleAction(action){
+    if (/^[0-9]$/.test(action)){
+      inputDigit(action);
+    } else if (action === 'decimal'){
+      inputDigit('.');
+    } else if (action === 'clear'){
+      clearAll();
+    } else if (action === 'negate'){
+      negate();
+    } else if (action === 'percent'){
+      percent();
+    } else if (['add','subtract','multiply','divide'].includes(action)){
+      chooseOperator(action);
+    } else if (action === 'equals'){
+      equals();
+    } else if (['mc','mplus','mminus','mr'].includes(action)){
+      let x = parseFloat(current.replace(/,/g,'')) || 0;
+      if (action === 'mc') memory = 0;
+      if (action === 'mplus') memory += x;
+      if (action === 'mminus') memory -= x;
+      if (action === 'mr') { current = String(memory); overwrite = true; }
+    } else {
+      sciApply(action);
+    }
+    render();
+  }
+
+  document.querySelectorAll('.key').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      handleAction(btn.dataset.action);
+    });
+  });
+
+  window.addEventListener('keydown', (e)=>{
+    const map = {
+      '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+      '.':'decimal','+':'add','-':'subtract','*':'multiply','/':'divide',
+      'Enter':'equals','=':'equals','Escape':'clear','%':'percent'
+    };
+    if (map[e.key]){
+      e.preventDefault();
+      handleAction(map[e.key]);
+    }
+  });
+
+  // ---- Deterministic sizing (no vw/vh guesswork) ----
+  // 1) Fill the available width exactly (no leftover margin left/right).
+  // 2) Cap the resulting keypad height to a fixed share of the screen,
+  //    so there's always a predictable, non-zero amount of breathing
+  //    room above — but never so much that the keypad looks stranded.
+  const PORTRAIT_MAX_KEYPAD_RATIO  = 0.66; // keypad(+display) share of app height
+  const LANDSCAPE_MAX_KEYPAD_RATIO = 0.92; // landscape is already short
+
+  function sizeKeys(){
+    const app = document.querySelector('.app');
+    const padArea = document.querySelector('.pad-area');
+    const displayWrap = document.querySelector('.display-wrap');
+    const sciGrid = document.getElementById('sciGrid');
+    const sciVisible = getComputedStyle(sciGrid).display !== 'none';
+    const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+
+    const gapPx = parseFloat(getComputedStyle(padArea).gap) || 0;
+    const padStyle = getComputedStyle(padArea);
+    const padHoriz = parseFloat(padStyle.paddingLeft) + parseFloat(padStyle.paddingRight);
+
+    const appRect = app.getBoundingClientRect();
+    const contentWidth = appRect.width - padHoriz;
+
+    // Total columns across grid(s), and gaps between/within them.
+    const totalCols = sciVisible ? 9 : 4;              // 5 (sci) + 4 (main)
+    const totalColGaps = sciVisible ? 8 : 3;            // gaps between all columns + the gap between the two grids
+
+    let keySize = (contentWidth - totalColGaps * gapPx) / totalCols;
+
+    // Cap by height: keypad content height = 5 rows * keySize + 4 gaps.
+    const maxRatio = isLandscape ? LANDSCAPE_MAX_KEYPAD_RATIO : PORTRAIT_MAX_KEYPAD_RATIO;
+    const displayH = displayWrap.getBoundingClientRect().height || 90;
+    const maxKeypadAreaHeight = appRect.height * maxRatio - displayH;
+    const keySizeByHeight = (maxKeypadAreaHeight - 4 * gapPx) / 5;
+
+    keySize = Math.max(40, Math.min(keySize, keySizeByHeight));
+    keySize = Math.floor(keySize);
+
+    document.documentElement.style.setProperty('--key-size', keySize + 'px');
+
+    // Scale the display digits and key labels proportionally to key size,
+    // rather than to raw viewport units.
+    const displayFont = Math.round(Math.min(keySize * 0.95, appRect.width * 0.16));
+    document.querySelector('.display').style.fontSize = displayFont + 'px';
+  }
+
+  window.addEventListener('resize', sizeKeys);
+  window.addEventListener('orientationchange', ()=> setTimeout(sizeKeys, 60));
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', sizeKeys);
+  }
+
+  clearAll();
+  render();
+  sizeKeys();
+  requestAnimationFrame(sizeKeys);
+  setTimeout(sizeKeys, 100);
+})();
+</script>
+</body>
+</html>
