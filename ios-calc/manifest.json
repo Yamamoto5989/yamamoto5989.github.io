@@ -1,0 +1,15 @@
+{
+  "name": "計算機",
+  "short_name": "計算機",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "index.html",
+  "icons": [
+    {
+      "src": "calc-icon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    }
+  ]
+}
