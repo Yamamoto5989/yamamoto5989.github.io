@@ -9,12 +9,16 @@
     <link rel="manifest" href="manifest.json">
     <style>
 @font-face {
+ font-family: 'LockClock';
+ src: url('https://yamamoto5989.github.io/LockClock.ttf') format('truetype');
+}
+
+@font-face {
  font-family: 'GoogleSans';
  src: url('https://yamamoto5989.github.io/GoogleSans-Medium.ttf') format('truetype');
  font-weight: normal;
  font-style: normal;
 }
-
       body {
   display: flex;
   align-items: center;
@@ -50,7 +54,7 @@
 #timeText {
   font-size: 19vw;
   font-weight: 700;
-  font-family: 'GoogleSans';
+  font-family: 'LockClock';
   
   /* 【修正箇所2】ここが一番の要因です。
      position: relative; を追加することで、初めて z-index が有効になり、
