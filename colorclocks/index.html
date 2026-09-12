@@ -90,36 +90,41 @@
           name: "Blue",
           bodyBg: "#ffffff",
           textColor: "#ffffff",
-          colors: ["rgba(20, 127, 255, 1)", "rgba(0, 108, 238, 1)", "rgba(0, 87, 190, 1)", "rgba(0, 63, 137, 1)"]
+          colors: ["rgba(20, 127, 255, 1)", "rgba(0, 108, 238, 1)", "rgba(0, 87, 190, 1)", "rgba(0, 63, 137, 1)"],
+          font-family: "SFUI"
         },
         {
           name: "Red",
           bodyBg: "#2b2b2b",
           textColor: "#2b2b2b",
-          colors: ["rgba(247, 77, 77, 1)", "rgba(245, 56, 56, 1)", "rgba(190, 0, 0, 1)", "rgba(137, 0, 7, 1)"]
+          colors: ["rgba(247, 77, 77, 1)", "rgba(245, 56, 56, 1)", "rgba(190, 0, 0, 1)", "rgba(137, 0, 7, 1)"],
+          font-family: "GoogleSans"
         },
         {
           name: "Green",
           bodyBg: "#ffffff",
           textColor: "#ffffff",
-          colors: ["rgba(0, 212, 0, 1)", "rgba(2, 179, 2, 1)", "rgba(3, 145, 3, 1)", "rgba(1, 112, 1, 1)"]
+          colors: ["rgba(0, 212, 0, 1)", "rgba(2, 179, 2, 1)", "rgba(3, 145, 3, 1)", "rgba(1, 112, 1, 1)"],
+          font-family: "SFUI"
         },
         {
           name: "Yellow",
           bodyBg: "#2b2b2b",
           textColor: "#2b2b2b",
-          colors: ["rgba(252, 195, 35, 1)", "rgba(245, 181, 7, 1)", "rgba(181, 134, 4, 1)", "rgba(148, 109, 3, 1)"]
+          colors: ["rgba(252, 195, 35, 1)", "rgba(245, 181, 7, 1)", "rgba(181, 134, 4, 1)", "rgba(148, 109, 3, 1)"],
+          font-family: "GoogleSans"
         }
       ];
 
       // 現在選択されているテーマのインデックス (0: Blue, 1: Green, 2: Red, 3: Yellow)
       let currentThemeIndex = 0;
 
-      // 静的な色（背景色と文字色）を切り替える関数
+      // 静的な色（背景色と文字色とフォント）を切り替える関数
       function applyThemeStyles() {
         const currentTheme = themes[currentThemeIndex];
         document.body.style.backgroundColor = currentTheme.bodyBg;
         timeText.style.color = currentTheme.textColor;
+        timeText.style.font-family = currentTheme.font-family
       }
 
       // 画面タップ（クリック）時にテーマのインデックスを進める
