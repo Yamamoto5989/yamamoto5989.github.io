@@ -91,7 +91,7 @@
           bodyBg: "#ffffff",
           textColor: "#ffffff",
           colors: ["rgba(20, 127, 255, 1)", "rgba(0, 108, 238, 1)", "rgba(0, 87, 190, 1)", "rgba(0, 63, 137, 1)"],
-          font-family: "SFUI"
+          font: "SFUI"
         },
         {
           name: "Red",
@@ -105,14 +105,14 @@
           bodyBg: "#ffffff",
           textColor: "#ffffff",
           colors: ["rgba(0, 212, 0, 1)", "rgba(2, 179, 2, 1)", "rgba(3, 145, 3, 1)", "rgba(1, 112, 1, 1)"],
-          font-family: "SFUI"
+          font: "SFUI"
         },
         {
           name: "Yellow",
           bodyBg: "#2b2b2b",
           textColor: "#2b2b2b",
           colors: ["rgba(252, 195, 35, 1)", "rgba(245, 181, 7, 1)", "rgba(181, 134, 4, 1)", "rgba(148, 109, 3, 1)"],
-          font-family: "GoogleSans"
+          font: "GoogleSans"
         }
       ];
 
@@ -124,7 +124,7 @@
         const currentTheme = themes[currentThemeIndex];
         document.body.style.backgroundColor = currentTheme.bodyBg;
         timeText.style.color = currentTheme.textColor;
-        timeText.style.font-family = currentTheme.font-family
+        timeText.style.font-family = currentTheme.font;
       }
 
       // 画面タップ（クリック）時にテーマのインデックスを進める
