@@ -49,111 +49,111 @@
 
 <script>
   var startScreen = document.getElementById('startScreen');
-  var startBtn = document.getElementById('startBtn');
-  var colorScreen = document.getElementById('colorScreen');
+var startBtn = document.getElementById('startBtn');
+var colorScreen = document.getElementById('colorScreen');
 
-  var colors = ['#FF0000', '#00FF00', '#0000FF'];
-  var index = 0;
-  var LONG_PRESS_MS = 600;
-  var pressTimer = null;
-  var longPressTriggered = false;
+var colors = ['#FF0000', '#00FF00', '#0000FF'];
+var index = 0;
+var LONG_PRESS_MS = 600;
+var pressTimer = null;
+var longPressTriggered = false;
 
-  function requestFS(el) {
-    var fn = el.requestFullscreen || el.webkitRequestFullscreen ||
-             el.webkitRequestFullScreen || el.mozRequestFullScreen ||
-             el.msRequestFullscreen;
-    if (fn) {
-      try { fn.call(el); } catch (e) { /* 古いブラウザでは無視 */ }
-    }
+function requestFS(el) {
+  var fn = el.requestFullscreen || el.webkitRequestFullscreen ||
+           el.webkitRequestFullScreen || el.mozRequestFullScreen ||
+           el.msRequestFullscreen;
+  if (fn) {
+    try { fn.call(el); } catch (e) { /* 古いブラウザでは無視 */ }
   }
+}
 
-  function exitFS() {
-    var fn = document.exitFullscreen || document.webkitExitFullscreen ||
-             document.webkitCancelFullScreen || document.mozCancelFullScreen ||
-             document.msExitFullscreen;
-    if (fn) {
-      try { fn.call(document); } catch (e) { /* 古いブラウザでは無視 */ }
-    }
+function exitFS() {
+  var fn = document.exitFullscreen || document.webkitExitFullscreen ||
+           document.webkitCancelFullScreen || document.mozCancelFullScreen ||
+           document.msExitFullscreen;
+  if (fn) {
+    try { fn.call(document); } catch (e) { /* 古いブラウザでは無視 */ }
   }
+}
 
-  function showStart() {
-    exitFS();
-    colorScreen.style.display = 'none';
-    startScreen.style.display = 'flex';
+function showStart() {
+  exitFS();
+  colorScreen.style.display = 'none';
+  startScreen.style.display = 'flex';
+}
+
+function showColor() {
+  requestFS(document.documentElement);
+  startScreen.style.display = 'none';
+  colorScreen.style.display = 'block';
+  colorScreen.style.background = colors[index];
+}
+
+function nextColor() {
+  index = (index + 1) % colors.length;
+  colorScreen.style.background = colors[index];
+}
+
+function addEvt(el, type, handler) {
+  if (el.addEventListener) {
+    el.addEventListener(type, handler, false);
+  } else if (el.attachEvent) {
+    el.attachEvent('on' + type, handler);
   }
+}
 
-  function showColor() {
-    requestFS(document.documentElement);
-    startScreen.style.display = 'none';
-    colorScreen.style.display = 'block';
-    colorScreen.style.background = colors[index];
+addEvt(startBtn, 'click', function () {
+  showColor();
+});
+
+function startPress(e) {
+  longPressTriggered = false;
+  pressTimer = setTimeout(function () {
+    longPressTriggered = true;
+    showStart();
+  }, LONG_PRESS_MS);
+}
+
+function cancelPress() {
+  if (pressTimer) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
   }
+}
 
-  function nextColor() {
-    index = (index + 1) % colors.length;
-    colorScreen.style.background = colors[index];
+function endPress(e) {
+  var wasLong = longPressTriggered;
+  cancelPress();
+  if (!wasLong) {
+    nextColor();
   }
+}
 
-  function addEvt(el, type, handler) {
-    if (el.addEventListener) {
-      el.addEventListener(type, handler, false);
-    } else if (el.attachEvent) {
-      el.attachEvent('on' + type, handler);
-    }
-  }
+// タッチ対応デバイス
+addEvt(colorScreen, 'touchstart', function (e) {
+  startPress(e);
+});
+addEvt(colorScreen, 'touchend', function (e) {
+  e.preventDefault();
+  endPress(e);
+});
+addEvt(colorScreen, 'touchmove', cancelPress);
+addEvt(colorScreen, 'touchcancel', cancelPress);
 
-  addEvt(startBtn, 'click', function () {
-    showColor();
-  });
+// マウス対応デバイス（PC等）
+addEvt(colorScreen, 'mousedown', function (e) {
+  startPress(e);
+});
+addEvt(colorScreen, 'mouseup', function (e) {
+  endPress(e);
+});
+addEvt(colorScreen, 'mouseleave', cancelPress);
 
-  function startPress(e) {
-    longPressTriggered = false;
-    pressTimer = setTimeout(function () {
-      longPressTriggered = true;
-      showStart();
-    }, LONG_PRESS_MS);
-  }
-
-  function cancelPress() {
-    if (pressTimer) {
-      clearTimeout(pressTimer);
-      pressTimer = null;
-    }
-  }
-
-  function endPress(e) {
-    var wasLong = longPressTriggered;
-    cancelPress();
-    if (!wasLong) {
-      nextColor();
-    }
-  }
-
-  // タッチ対応デバイス
-  addEvt(colorScreen, 'touchstart', function (e) {
-    startPress(e);
-  });
-  addEvt(colorScreen, 'touchend', function (e) {
-    e.preventDefault();
-    endPress(e);
-  });
-  addEvt(colorScreen, 'touchmove', cancelPress);
-  addEvt(colorScreen, 'touchcancel', cancelPress);
-
-  // マウス対応デバイス（PC等）
-  addEvt(colorScreen, 'mousedown', function (e) {
-    startPress(e);
-  });
-  addEvt(colorScreen, 'mouseup', function (e) {
-    endPress(e);
-  });
-  addEvt(colorScreen, 'mouseleave', cancelPress);
-
-  // 長押し時のコンテキストメニュー抑制（対応ブラウザのみ）
-  addEvt(colorScreen, 'contextmenu', function (e) {
-    if (e.preventDefault) e.preventDefault();
-    return false;
-  });
+// 長押し時のコンテキストメニュー抑制（対応ブラウザのみ）
+addEvt(colorScreen, 'contextmenu', function (e) {
+  if (e.preventDefault) e.preventDefault();
+  return false;
+});
 </script>
 
 </body>
