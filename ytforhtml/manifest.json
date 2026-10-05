@@ -1,6 +1,6 @@
 {
-  "name": "YouTube for HTML",
-  "short_name": "YouTube for HTML",
+  "name": "YouTubeLite",
+  "short_name": "YouTubeLite",
   "theme_color": "#FF0033",
   "background_color": "#FF0033",
   "display": "standalone",
