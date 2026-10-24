@@ -7,7 +7,7 @@
   "start_url": "index.html",
   "icons": [
     {
-      "src": "blockpazzle_icon.png",
+      "src": "blockpuzzle_icon.png",
       "sizes": "192x192",
       "type": "image/png"
     }
