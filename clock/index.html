@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="clock_icon.png">
+    <link rel="apple-touch-icon" href="clock_icon.png">
+    <link rel="manifest" href="manifest.json">
+    <title>置き時計</title>
+    <style>
+        @font-face {
+            font-family: 'DSEG';
+            src: url('./DSEG7Classic-Bold.ttf') format('truetype');
+        }
+
+        body {
+                background-color: #000;
+                color: #fff;
+                margin: 0;
+                width: 100vw;
+                height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;
+        }
+
+        .clock {
+            font-family: 'DSEG', monospace;
+            font-size: min(25vw, 45vh);
+            margin: 0;
+            white-space: nowrap;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <p id="clock" class="clock"></p>
+
+    <script>
+        const clock = document.getElementById("clock");
+
+        function updateClock() {
+            const now = new Date();
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+
+            clock.textContent = `${hours}:${minutes}`;
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
