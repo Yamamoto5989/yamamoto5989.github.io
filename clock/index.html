@@ -1,57 +1,86 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="clock_icon.png">
-    <link rel="apple-touch-icon" href="clock_icon.png">
-    <link rel="manifest" href="manifest.json">
-    <title>置き時計</title>
-    <style>
-        @font-face {
-            font-family: 'DSEG';
-            src: url('./DSEG7Classic-Bold.ttf') format('truetype');
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>置き時計</title>
 
-        body {
-                background-color: #000;
-                color: #fff;
-                margin: 0;
-                width: 100vw;
-                height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                overflow: hidden;
-        }
+  <link rel="icon" href="clock_icon.png">
+  <link rel="apple-touch-icon" href="clock_icon.png">
+  <link rel="manifest" href="manifest.json">
 
-        .clock {
-            font-family: 'DSEG', monospace;
-            font-size: min(25vw, 45vh);
-            margin: 0;
-            white-space: nowrap;
-            text-align: center;
-        }
-    </style>
+  <style>
+    /* ---------- フォント(7セグ) ---------- */
+    @font-face {
+      font-family: 'DSEG';
+      src: url('./DSEG7Classic-Bold.ttf') format('truetype');
+    }
+
+    /* ---------- 画面全体:黒背景・中央配置 ---------- */
+    html,
+    body {
+      background-color: #000;
+    }
+
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      color: #fff;
+    }
+
+    /* ---------- 時計の文字 ---------- */
+    .clock {
+      margin: 0;
+      font-family: 'DSEG', monospace;
+      font-size: 25vw;          /* 縦長〜標準的な画面は横幅基準 */
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    /* 横長の画面(縦横比 9:5 より横長)は高さ基準にする。
+       iOS 9 は CSS の min() が使えないため、その代わり */
+    @media (min-aspect-ratio: 9/5) {
+      .clock {
+        font-size: 45vh;
+      }
+    }
+  </style>
 </head>
+
 <body>
-    <p id="clock" class="clock"></p>
+  <p id="clock" class="clock"></p>
 
-    <script>
-        const clock = document.getElementById("clock");
+  <script>
+    var clockElement = document.getElementById("clock");
 
-        function updateClock() {
-            const now = new Date();
+    // 1桁の数字を2桁にそろえる(例: 7 → "07")
+    // iOS 9 は String.padStart が使えないため自前で書く
+    function twoDigits(number) {
+      if (number < 10) {
+        return "0" + number;
+      }
+      return String(number);
+    }
 
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
+    // 現在時刻を「時:分」で表示する
+    function updateClock() {
+      var now = new Date();
+      var hours = twoDigits(now.getHours());
+      var minutes = twoDigits(now.getMinutes());
 
-            clock.textContent = `${hours}:${minutes}`;
-        }
+      clockElement.textContent = hours + ":" + minutes;
+    }
 
-        updateClock();
-        setInterval(updateClock, 1000);
-    </script>
+    // 初回表示 → 以降は1秒ごとに更新
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
 </body>
 </html>
