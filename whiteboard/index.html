@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <!-- スマホでの正しい表示のためのviewport設定 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ホワイトボード</title>
-<link rel="manifest" href="manifest.json">
 <link rel="icon" href="Whiteboard_Icon.png">
 <link rel="apple-touch-icon" href="Whiteboard_Icon.png">
+<link rel="manifest" href="manifest.json">
+<title>ホワイトボード</title>
 <style>
 /* ページ全体：余白なし、スクロールなし */
 html, body {
@@ -60,6 +60,8 @@ html, body {
 /* キャンバス：HTML属性で指定した実寸のまま利用（CSSでの拡大はしない） */
 canvas {
   display: block;
+  position: absolute;
+  transform-origin: 50% 50%;
   /* ブラウザ標準のスクロール/ズーム等のタッチ処理を無効化（Pointer Eventsで処理） */
   touch-action: none;
 }
@@ -81,6 +83,7 @@ canvas {
   <button id="eraser">消しゴム</button>
   <label for="size">太さ:</label>
   <input type="range" id="size" min="1" max="50" value="10" step="1">
+  <label for="pressureToggle"><input type="checkbox" id="pressureToggle" checked>筆圧</label>
   <!-- ペンの色選択はトグルボタンで切替。初期は黒 -->
   ペンの色：
   <button id="penColorToggle">黒</button>
@@ -104,23 +107,50 @@ context.fillStyle = 'white';
 context.fillRect(0, 0, canvas.width, canvas.height);
 
 /*
-  resizeCanvas の仕様：
+  画面回転の仕様：
+  - ツールバーなどのUIは、回転後の向きに合わせて通常どおり並び直す。
+  - キャンバス（描いた内容）は「端末に固定」。端末と一緒に回転し、内容は欠けない。
+    実装としては、起動時の向きを基準に、回転した分だけキャンバスを逆向きにCSS回転させる。
+    （端末を反時計回りに90°回すと screen.orientation.angle が 90 になる）
   - ウィンドウが広がった場合は、キャンバスを拡大（既存内容は保持）。
-  - ウィンドウが縮小された場合は、キャンバスはそのままにして、表示領域だけ切り取ります。
+  - 縮小された場合は、キャンバスはそのままにして表示領域だけ切り取る（基準向きでは左上基準）。
 */
+function currentAngle() {
+  let a;
+  if (window.screen && screen.orientation && typeof screen.orientation.angle === 'number') {
+    a = screen.orientation.angle;
+  } else if (typeof window.orientation === 'number') {
+    a = window.orientation;
+  } else {
+    a = window.innerWidth > window.innerHeight ? 90 : 0;
+  }
+  return (((Math.round(a / 90) * 90) % 360) + 360) % 360;
+}
+const baseAngle = currentAngle(); // 起動時の向き（この向きのときキャンバスは無回転）
+let canvasRotation = 0;           // キャンバスに適用しているCSS回転角(度, 時計回りが正)
+let frameW = 0;                   // 現在の画面が、キャンバス座標系で占める幅
+let frameH = 0;                   // 同、高さ
+
 function resizeCanvas() {
   const winW = window.innerWidth;
   const winH = window.innerHeight;
   container.style.width = winW + 'px';
   container.style.height = winH + 'px';
 
+  // 起動時の向きからの回転量（端末を反時計回りに回した角度）
+  const rel = (currentAngle() - baseAngle + 360) % 360;
+  canvasRotation = (360 - rel) % 360;
+  const odd = (rel === 90 || rel === 270);
+  frameW = odd ? winH : winW;
+  frameH = odd ? winW : winH;
+
   let newCanvasWidth = canvas.width;
   let newCanvasHeight = canvas.height;
-  if (winW > canvas.width) {
-    newCanvasWidth = winW;
+  if (frameW > canvas.width) {
+    newCanvasWidth = frameW;
   }
-  if (winH > canvas.height) {
-    newCanvasHeight = winH;
+  if (frameH > canvas.height) {
+    newCanvasHeight = frameH;
   }
   if (newCanvasWidth !== canvas.width || newCanvasHeight !== canvas.height) {
     const tempCanvas = document.createElement('canvas');
@@ -135,8 +165,26 @@ function resizeCanvas() {
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(tempCanvas, 0, 0);
   }
+
+  // 画面は、キャンバス座標系の (0,0)-(frameW,frameH) の領域を映す。
+  // その領域の中心が画面中心に来るようにキャンバスの中心位置を決め、中心まわりに回転する。
+  const rad = canvasRotation * Math.PI / 180;
+  const cos = Math.round(Math.cos(rad));
+  const sin = Math.round(Math.sin(rad));
+  const ox = canvas.width / 2 - frameW / 2;
+  const oy = canvas.height / 2 - frameH / 2;
+  const centerX = winW / 2 + (ox * cos - oy * sin);
+  const centerY = winH / 2 + (ox * sin + oy * cos);
+  canvas.style.left = (centerX - canvas.width / 2) + 'px';
+  canvas.style.top = (centerY - canvas.height / 2) + 'px';
+  canvas.style.transform = 'rotate(' + canvasRotation + 'deg)';
 }
 window.addEventListener('resize', resizeCanvas);
+// 向きの変化通知はリサイズより先に来ることがあるため、少し待ってから再計算する
+if (window.screen && screen.orientation && screen.orientation.addEventListener) {
+  screen.orientation.addEventListener('change', () => setTimeout(resizeCanvas, 150));
+}
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 150));
 resizeCanvas();
 
 let drawing = false;
@@ -164,8 +212,17 @@ function undo() {
 
 // キャンバス内描画用の座標取得
 function getCoordinates(event) {
+  // 回転後の外接矩形の中心＝キャンバス中心。そこからの差分を逆回転してキャンバス座標に戻す。
   const rect = canvas.getBoundingClientRect();
-  return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  const dx = event.clientX - (rect.left + rect.width / 2);
+  const dy = event.clientY - (rect.top + rect.height / 2);
+  const rad = canvasRotation * Math.PI / 180;
+  const cos = Math.round(Math.cos(rad));
+  const sin = Math.round(Math.sin(rad));
+  return {
+    x: dx * cos + dy * sin + canvas.width / 2,
+    y: -dx * sin + dy * cos + canvas.height / 2
+  };
 }
 
 // 消しゴムプレビュー用：container基準の座標取得
@@ -185,20 +242,61 @@ function updateEraserPreview(event) {
 
 /*
   「実際に画面に触れている（押している）か」の判定。
-  Sペンは近づけただけ（ホバー）でもポインターイベントが届くため、
-  ペンの場合は主ボタン(buttons & 1)が押され、かつ筆圧 > 0 のときだけ接触とみなす。
-  指・マウスは従来どおり。
+  Sペンは近づけただけ（ホバー）でもポインターイベントが届くが、ホバー中は pressure が 0。
+  そこでペンの場合は「pressure > 0（ペン先が実際に触れている）」かつ
+  何らかのボタン（先端=1 / サイドボタン=2 / 消しゴム側=32）が立っているときだけ接触とみなす。
+  サイドボタンを押しながらでも接触を正しく拾える。指・マウスは従来どおり。
 */
 function isContact(event) {
   if (event.pointerType === 'pen') {
-    return (event.buttons & 1) === 1 && event.pressure > 0;
+    return event.pressure > 0 && (event.buttons & (1 | 2 | 32)) !== 0;
   }
   return (event.buttons & 1) === 1;
+}
+
+/* Sペンのサイドボタン(2)・消しゴム側(32)が押されている間は消しゴム扱い */
+function isPenEraserButton(event) {
+  return event.pointerType === 'pen' && (event.buttons & (2 | 32)) !== 0;
+}
+function isErasing(event) {
+  return erasing || isPenEraserButton(event);
+}
+
+/*
+  パームリジェクション：ペンが近づいている（ホバー範囲内にある）間は、指での描画を無効にする。
+  ペンがホバー範囲から外れると、pointerout の relatedTarget が null になるので、そこで解除する。
+*/
+let penNear = false;
+document.addEventListener('pointerover', (e) => { if (e.pointerType === 'pen') penNear = true; }, true);
+document.addEventListener('pointermove', (e) => { if (e.pointerType === 'pen') penNear = true; }, true);
+document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'pen') penNear = true; }, true);
+document.addEventListener('pointerout', (e) => {
+  if (e.pointerType === 'pen' && !e.relatedTarget) penNear = false;
+}, true);
+document.addEventListener('pointercancel', (e) => { if (e.pointerType === 'pen') penNear = false; }, true);
+window.addEventListener('blur', () => { penNear = false; });
+
+/*
+  筆圧：ペンのときだけ有効。スライダーの太さ＝最大筆圧時の太さ。
+  筆圧は急に変わるとガタつくので、軽く平滑化する。消しゴムは太さ固定。
+*/
+let usePressure = true;
+let smoothedPressure = 0.5;
+function resetPressure(event) {
+  smoothedPressure = Math.min(1, Math.max(0, event.pressure)) || 0.5;
+}
+function widthFor(event, eraseMode) {
+  if (eraseMode || !usePressure || event.pointerType !== 'pen') return lineWidth;
+  const p = Math.min(1, Math.max(0, event.pressure));
+  smoothedPressure += (p - smoothedPressure) * 0.4;
+  return Math.max(1, lineWidth * (0.15 + 0.85 * smoothedPressure));
 }
 
 function startDrawing(event) {
   // ホバー（非接触）では描画を開始しない
   if (!isContact(event)) return;
+  // ペンが近づいている間は指（タッチ）で描かない
+  if (event.pointerType === 'touch' && penNear) return;
   // すでに別のポインターで描画中なら無視（パームリジェクション的な保険）
   if (drawing) return;
 
@@ -208,18 +306,19 @@ function startDrawing(event) {
   activePointerId = event.pointerId;
   try { canvas.setPointerCapture(event.pointerId); } catch (e) {}
 
+  const eraseMode = isErasing(event);
+  resetPressure(event);
+  const w = widthFor(event, eraseMode);
   const coords = getCoordinates(event);
-  context.beginPath();
-  context.moveTo(coords.x, coords.y);
   // 点だけのタップでも描画されるように、始点に丸を打つ
-  context.fillStyle = erasing ? 'white' : currentPenColor;
+  context.fillStyle = eraseMode ? 'white' : currentPenColor;
   context.beginPath();
-  context.arc(coords.x, coords.y, lineWidth / 2, 0, Math.PI * 2);
+  context.arc(coords.x, coords.y, w / 2, 0, Math.PI * 2);
   context.fill();
   context.beginPath();
   context.moveTo(coords.x, coords.y);
 
-  if (erasing) {
+  if (eraseMode) {
     updateEraserPreview(event);
   }
 }
@@ -236,8 +335,9 @@ function stopDrawing(event) {
 }
 
 function draw(event) {
-  if (erasing) {
-    // 消しゴムのプレビューはホバー中も表示
+  const eraseMode = isErasing(event);
+  if (eraseMode) {
+    // 消しゴムのプレビューはホバー中も表示（サイドボタンを押した瞬間から出る）
     updateEraserPreview(event);
   } else {
     eraserPreview.style.display = 'none';
@@ -246,6 +346,12 @@ function draw(event) {
   if (!drawing) return;
   if (event.pointerId !== activePointerId) return;
 
+  // 指で描いている途中でペンが近づいたら、指のストロークは打ち切る
+  if (event.pointerType === 'touch' && penNear) {
+    stopDrawing(event);
+    return;
+  }
+
   // 描画中にペンが浮いた（接触が外れた）場合は即座に描画終了
   if (!isContact(event)) {
     stopDrawing(event);
@@ -253,15 +359,21 @@ function draw(event) {
   }
 
   event.preventDefault();
-  const coords = getCoordinates(event);
-  context.lineWidth = lineWidth;
+  // 高速に動かしたときも滑らかになるよう、間引かれたイベントも使う
+  const points = (event.getCoalescedEvents && event.getCoalescedEvents().length)
+    ? event.getCoalescedEvents()
+    : [event];
   context.lineCap = 'round';
-  // 消しゴム時は 'white' を使用
-  context.strokeStyle = erasing ? 'white' : currentPenColor;
-  context.lineTo(coords.x, coords.y);
-  context.stroke();
-  context.beginPath();
-  context.moveTo(coords.x, coords.y);
+  context.lineJoin = 'round';
+  context.strokeStyle = eraseMode ? 'white' : currentPenColor;
+  for (const e of points) {
+    const coords = getCoordinates(e);
+    context.lineWidth = widthFor(e, eraseMode);
+    context.lineTo(coords.x, coords.y);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(coords.x, coords.y);
+  }
 }
 
 // イベント登録（Pointer Events に統一。マウス/タッチの互換イベントは使わない）
@@ -288,6 +400,9 @@ document.getElementById('eraser').addEventListener('click', () => {
 document.getElementById('size').addEventListener('input', (event) => {
   lineWidth = parseInt(event.target.value, 10);
 });
+document.getElementById('pressureToggle').addEventListener('change', (event) => {
+  usePressure = event.target.checked;
+});
 
 // ペン色のトグルボタンによる切り替え
 const penColorToggle = document.getElementById('penColorToggle');
@@ -310,8 +425,9 @@ document.getElementById('clear').addEventListener('click', () => {
   context.fillRect(0, 0, canvas.width, canvas.height);
 });
 document.getElementById('download').addEventListener('click', () => {
-  const viewWidth = window.innerWidth;
-  const viewHeight = window.innerHeight;
+  // 回転していても、基準の向きのまま画面に映っている範囲を保存する
+  const viewWidth = frameW;
+  const viewHeight = frameH;
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = viewWidth;
   tempCanvas.height = viewHeight;
