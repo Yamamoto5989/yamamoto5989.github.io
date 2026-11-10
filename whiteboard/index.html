@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <!-- スマホでの正しい表示のためのviewport設定 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="Whiteboard_Icon.png">
-<link rel="apple-touch-icon" href="Whiteboard_Icon.png">
-<link rel="manifest" href="manifest.json">
 <title>ホワイトボード</title>
 <style>
 /* ページ全体：余白なし、スクロールなし */
@@ -292,6 +289,64 @@ function widthFor(event, eraseMode) {
   return Math.max(1, lineWidth * (0.15 + 0.85 * smoothedPressure));
 }
 
+/*
+  滑らかな線の描画：
+  入力点を直線で結ぶと、高速に動かして点の間隔が開いたときに角ができる。
+  そこで「隣り合う入力点の中点どうし」を、間の入力点を制御点とした2次ベジェ曲線でつなぐ。
+  接線が連続するので角が出ない。太さ（筆圧）は曲線上で線形に補間する。
+  曲線は中点までしか描けないため、最後の1区間は指を離したとき(stopDrawing)に仕上げる。
+*/
+let lastPt = null;      // 直近の入力点 {x, y, w}
+let lastMid = null;     // 直近の中点（次の曲線の始点）{x, y, w}
+let lastStyle = 'black';
+
+function strokeCurve(m0, c, m1, style) {
+  const len = Math.hypot(c.x - m0.x, c.y - m0.y) + Math.hypot(m1.x - c.x, m1.y - c.y);
+  const steps = Math.max(1, Math.ceil(len / 2)); // 約2pxごとに細かく刻む
+  context.strokeStyle = style;
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
+  let px = m0.x, py = m0.y;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const u = 1 - t;
+    const x = u * u * m0.x + 2 * u * t * c.x + t * t * m1.x;
+    const y = u * u * m0.y + 2 * u * t * c.y + t * t * m1.y;
+    context.lineWidth = m0.w + (m1.w - m0.w) * t;
+    context.beginPath();
+    context.moveTo(px, py);
+    context.lineTo(x, y);
+    context.stroke();
+    px = x;
+    py = y;
+  }
+  context.beginPath();
+}
+
+function addPoint(x, y, w, style) {
+  lastStyle = style;
+  if (!lastPt) {
+    lastPt = { x: x, y: y, w: w };
+    lastMid = { x: x, y: y, w: w };
+    return;
+  }
+  // 手ブレ・同一座標の重複で線がギザつくのを避けるため、ごく近い点は無視
+  if (Math.hypot(x - lastPt.x, y - lastPt.y) < 0.8) return;
+  const mid = { x: (lastPt.x + x) / 2, y: (lastPt.y + y) / 2, w: (lastPt.w + w) / 2 };
+  strokeCurve(lastMid, lastPt, mid, style);
+  lastPt = { x: x, y: y, w: w };
+  lastMid = mid;
+}
+
+function finishStroke() {
+  // 最後の中点から、実際の最終入力点まで仕上げる（線が指を離した位置まで届くように）
+  if (lastPt && lastMid && (lastMid.x !== lastPt.x || lastMid.y !== lastPt.y)) {
+    strokeCurve(lastMid, { x: (lastMid.x + lastPt.x) / 2, y: (lastMid.y + lastPt.y) / 2, w: 0 }, lastPt, lastStyle);
+  }
+  lastPt = null;
+  lastMid = null;
+}
+
 function startDrawing(event) {
   // ホバー（非接触）では描画を開始しない
   if (!isContact(event)) return;
@@ -310,13 +365,17 @@ function startDrawing(event) {
   resetPressure(event);
   const w = widthFor(event, eraseMode);
   const coords = getCoordinates(event);
+  const style = eraseMode ? 'white' : currentPenColor;
   // 点だけのタップでも描画されるように、始点に丸を打つ
-  context.fillStyle = eraseMode ? 'white' : currentPenColor;
+  context.fillStyle = style;
   context.beginPath();
   context.arc(coords.x, coords.y, w / 2, 0, Math.PI * 2);
   context.fill();
   context.beginPath();
-  context.moveTo(coords.x, coords.y);
+
+  lastPt = null;
+  lastMid = null;
+  addPoint(coords.x, coords.y, w, style);
 
   if (eraseMode) {
     updateEraserPreview(event);
@@ -326,6 +385,7 @@ function startDrawing(event) {
 function stopDrawing(event) {
   if (!drawing) return;
   if (event && event.pointerId !== activePointerId) return;
+  finishStroke();
   drawing = false;
   if (activePointerId !== null) {
     try { canvas.releasePointerCapture(activePointerId); } catch (e) {}
@@ -363,16 +423,10 @@ function draw(event) {
   const points = (event.getCoalescedEvents && event.getCoalescedEvents().length)
     ? event.getCoalescedEvents()
     : [event];
-  context.lineCap = 'round';
-  context.lineJoin = 'round';
-  context.strokeStyle = eraseMode ? 'white' : currentPenColor;
+  const style = eraseMode ? 'white' : currentPenColor;
   for (const e of points) {
     const coords = getCoordinates(e);
-    context.lineWidth = widthFor(e, eraseMode);
-    context.lineTo(coords.x, coords.y);
-    context.stroke();
-    context.beginPath();
-    context.moveTo(coords.x, coords.y);
+    addPoint(coords.x, coords.y, widthFor(e, eraseMode), style);
   }
 }
 
@@ -452,4 +506,4 @@ window.addEventListener('beforeunload', (e) => {
 });
 </script>
 </body>
-</html>
+  </html>
