@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <!-- スマホでの正しい表示のためのviewport設定 -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="icon" href="Whiteboard_Icon.png">
+<link rel="apple-touch-icon" href="Whiteboard_Icon.png
+<link rel="manifest" href="manifest.json">
 <title>ホワイトボード</title>
 <style>
 /* ページ全体：余白なし、スクロールなし */
@@ -46,11 +49,13 @@ html, body {
 
 /* キャンバスコンテナ：ウィンドウサイズに合わせ、余分な部分を隠す */
 #canvasContainer {
-  position: absolute;
+  /* 画面いっぱいに固定。サイズはCSSで常に画面に追従させる（JSで固定pxを入れると、
+     回転直後に古い幅がはみ出してページが縮小表示され、キャンバスまで拡大されてしまう） */
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -81,6 +86,7 @@ canvas {
   <label for="size">太さ:</label>
   <input type="range" id="size" min="1" max="50" value="10" step="1">
   <label for="pressureToggle"><input type="checkbox" id="pressureToggle" checked>筆圧</label>
+  <label for="fingerToggle"><input type="checkbox" id="fingerToggle" checked>指で描く</label>
   <!-- ペンの色選択はトグルボタンで切替。初期は黒 -->
   ペンの色：
   <button id="penColorToggle">黒</button>
@@ -131,8 +137,6 @@ let frameH = 0;                   // 同、高さ
 function resizeCanvas() {
   const winW = window.innerWidth;
   const winH = window.innerHeight;
-  container.style.width = winW + 'px';
-  container.style.height = winH + 'px';
 
   // 起動時の向きからの回転量（端末を反時計回りに回した角度）
   const rel = (currentAngle() - baseAngle + 360) % 360;
@@ -260,18 +264,29 @@ function isErasing(event) {
 }
 
 /*
-  パームリジェクション：ペンが近づいている（ホバー範囲内にある）間は、指での描画を無効にする。
-  ペンがホバー範囲から外れると、pointerout の relatedTarget が null になるので、そこで解除する。
+  指での描画の有効/無効：
+  - ツールバーのチェックボックス「指で描く」で手動に切り替える。無効のときはタッチ入力では描かず、ペン・マウスだけが描ける。
+  - 起動後に初めてペンが検知された（近づいた）ときだけ、一度だけ自動で「無効」にする。
+    以降は自動では切り替えず、チェックを入れ直しても、再びペンを近づけて勝手に無効になることはない。
 */
-let penNear = false;
-document.addEventListener('pointerover', (e) => { if (e.pointerType === 'pen') penNear = true; }, true);
-document.addEventListener('pointermove', (e) => { if (e.pointerType === 'pen') penNear = true; }, true);
-document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'pen') penNear = true; }, true);
-document.addEventListener('pointerout', (e) => {
-  if (e.pointerType === 'pen' && !e.relatedTarget) penNear = false;
-}, true);
-document.addEventListener('pointercancel', (e) => { if (e.pointerType === 'pen') penNear = false; }, true);
-window.addEventListener('blur', () => { penNear = false; });
+let fingerEnabled = true;
+let penSeen = false;
+const fingerToggle = document.getElementById('fingerToggle');
+function setFingerEnabled(enabled) {
+  fingerEnabled = enabled;
+  fingerToggle.checked = enabled;
+}
+function isBlockedFinger(event) {
+  return event.pointerType === 'touch' && !fingerEnabled;
+}
+function onPenSeen(event) {
+  if (penSeen || event.pointerType !== 'pen') return;
+  penSeen = true;
+  setFingerEnabled(false);
+}
+document.addEventListener('pointerover', onPenSeen, true);
+document.addEventListener('pointermove', onPenSeen, true);
+document.addEventListener('pointerdown', onPenSeen, true);
 
 /*
   筆圧：ペンのときだけ有効。スライダーの太さ＝最大筆圧時の太さ。
@@ -350,8 +365,8 @@ function finishStroke() {
 function startDrawing(event) {
   // ホバー（非接触）では描画を開始しない
   if (!isContact(event)) return;
-  // ペンが近づいている間は指（タッチ）で描かない
-  if (event.pointerType === 'touch' && penNear) return;
+  // 指での描画が無効のときは、タッチでは描かない
+  if (isBlockedFinger(event)) return;
   // すでに別のポインターで描画中なら無視（パームリジェクション的な保険）
   if (drawing) return;
 
@@ -406,8 +421,8 @@ function draw(event) {
   if (!drawing) return;
   if (event.pointerId !== activePointerId) return;
 
-  // 指で描いている途中でペンが近づいたら、指のストロークは打ち切る
-  if (event.pointerType === 'touch' && penNear) {
+  // 指で描いている途中で無効に切り替えられたら、そのストロークは打ち切る
+  if (isBlockedFinger(event)) {
     stopDrawing(event);
     return;
   }
@@ -456,6 +471,10 @@ document.getElementById('size').addEventListener('input', (event) => {
 });
 document.getElementById('pressureToggle').addEventListener('change', (event) => {
   usePressure = event.target.checked;
+});
+fingerToggle.addEventListener('change', (event) => {
+  penSeen = true; // 手動で操作したら、以後は自動切り替えをしない
+  setFingerEnabled(event.target.checked);
 });
 
 // ペン色のトグルボタンによる切り替え
@@ -506,4 +525,4 @@ window.addEventListener('beforeunload', (e) => {
 });
 </script>
 </body>
-  </html>
+</html>
